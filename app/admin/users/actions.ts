@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
-import { requireManager } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth";
 import { hashPassword, generateTempPassword } from "@/lib/password";
 import { createUserSchema } from "@/lib/validation";
 
@@ -16,7 +16,7 @@ export async function createUserAction(
   _prev: CreateUserResult,
   formData: FormData
 ): Promise<CreateUserResult> {
-  const manager = await requireManager();
+  const manager = await requireAdmin();
 
   const parsed = createUserSchema.safeParse({
     username: formData.get("username"),
@@ -61,7 +61,7 @@ export interface UserActionResult {
 }
 
 export async function toggleActiveAction(userId: number): Promise<UserActionResult> {
-  const manager = await requireManager();
+  const manager = await requireAdmin();
   if (userId === manager.id) {
     return { error: "You can't deactivate your own account." };
   }
@@ -77,7 +77,7 @@ export async function toggleActiveAction(userId: number): Promise<UserActionResu
 }
 
 export async function resetPasswordAction(userId: number): Promise<UserActionResult> {
-  const manager = await requireManager();
+  const manager = await requireAdmin();
   if (userId === manager.id) {
     return { error: "Use the Change password page for your own account." };
   }

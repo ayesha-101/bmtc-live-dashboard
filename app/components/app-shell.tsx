@@ -1,11 +1,13 @@
 import Link from "next/link";
 import type { User } from "@prisma/client";
 import { toActor } from "@/lib/auth";
-import { canCreateLpo, canInvoice, isManager } from "@/lib/permissions";
+import { canCreateLpo, canInvoice, canManageAccounts, isManager } from "@/lib/permissions";
 import { DEPARTMENT_LABELS } from "@/lib/format";
 import { logoutAction } from "@/app/logout/actions";
 
-export type Section = "dashboard" | "lpos" | "invoices" | "users";
+export type Section = "dashboard" | "lpos" | "invoices" | "users" | "security";
+
+const ROLE_LABELS = { employee: "Employee", manager: "Manager", admin: "Admin" } as const;
 
 export default function AppShell({
   user,
@@ -17,11 +19,14 @@ export default function AppShell({
   children: React.ReactNode;
 }) {
   const actor = toActor(user);
+  // Each role sees only its own tools: the BM gets the dashboard, the
+  // admin gets accounts + security, employees get their queue.
   const links: Array<{ id: Section; href: string; label: string; show: boolean }> = [
     { id: "dashboard", href: "/dashboard", label: "Dashboard", show: isManager(actor) },
-    { id: "lpos", href: "/lpos", label: "My LPOs", show: canCreateLpo(actor) || isManager(actor) },
+    { id: "lpos", href: "/lpos", label: "My LPOs", show: canCreateLpo(actor) },
     { id: "invoices", href: "/invoices", label: "Pending Invoices", show: canInvoice(actor) },
-    { id: "users", href: "/admin/users", label: "Users", show: isManager(actor) },
+    { id: "users", href: "/admin/users", label: "Users", show: canManageAccounts(actor) },
+    { id: "security", href: "/admin/security", label: "Security", show: canManageAccounts(actor) },
   ];
 
   return (
@@ -34,8 +39,8 @@ export default function AppShell({
           </Link>
           <div className="header-user">
             <span>{user.fullName}</span>
-            <span className="pill brand">{user.role === "manager" ? "Manager" : "Employee"}</span>
-            <span className="pill">{DEPARTMENT_LABELS[user.department]}</span>
+            <span className="pill brand">{ROLE_LABELS[user.role]}</span>
+            {user.role === "employee" && <span className="pill">{DEPARTMENT_LABELS[user.department]}</span>}
             <form action={logoutAction}>
               <button type="submit" className="btn" style={{ padding: "6px 12px", fontSize: 12 }}>
                 Sign out

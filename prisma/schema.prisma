@@ -24,9 +24,14 @@ enum Department {
   sales_admin
 }
 
+// Three roles with deliberately separate jobs:
+//   employee — creates/drives LPOs (or, in sales_admin, invoices them)
+//   manager  — the BM: read-only dashboard + activity across ALL depts
+//   admin    — accounts + security only; never sees business data
 enum UserRole {
   employee
   manager
+  admin
 }
 
 // A single LPO record that evolves through these statuses. quoted and

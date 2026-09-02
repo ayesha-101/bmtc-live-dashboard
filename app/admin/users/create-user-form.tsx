@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { createUserAction, type CreateUserResult } from "./actions";
 import { DEPARTMENT_LABELS } from "@/lib/format";
 
@@ -10,9 +10,13 @@ const DEPARTMENTS = ["electrical", "urban", "lightning", "water", "sales_admin"]
 export default function CreateUserForm() {
   const [state, formAction, pending] = useActionState(createUserAction, initial);
   const formRef = useRef<HTMLFormElement>(null);
+  const [role, setRole] = useState<"employee" | "manager" | "admin">("employee");
 
   useEffect(() => {
-    if (state.tempPassword) formRef.current?.reset();
+    if (state.tempPassword) {
+      formRef.current?.reset();
+      setRole("employee");
+    }
   }, [state.tempPassword]);
 
   return (
@@ -28,7 +32,7 @@ export default function CreateUserForm() {
 
       <div className="form-grid">
         <div className="field">
-          <label htmlFor="username">Username</label>
+          <label htmlFor="username">Username (English letters, numbers, . _ - only)</label>
           <input id="username" name="username" required placeholder="e.g. a.hassan" />
         </div>
         <div className="field">
@@ -39,18 +43,26 @@ export default function CreateUserForm() {
 
       <div className="form-grid">
         <div className="field">
-          <label htmlFor="department">Department</label>
+          <label htmlFor="role">Role</label>
+          <select
+            id="role"
+            name="role"
+            value={role}
+            onChange={(e) => setRole(e.target.value as typeof role)}
+          >
+            <option value="employee">Employee — creates LPOs / invoices</option>
+            <option value="manager">Manager (BM) — read-only dashboard</option>
+            <option value="admin">Admin — accounts &amp; security only</option>
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="department">
+            Department {role !== "employee" && <span className="muted">(not used for this role)</span>}
+          </label>
           <select id="department" name="department" defaultValue="electrical">
             {DEPARTMENTS.map((d) => (
               <option key={d} value={d}>{DEPARTMENT_LABELS[d]}</option>
             ))}
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="role">Role</label>
-          <select id="role" name="role" defaultValue="employee">
-            <option value="employee">Employee</option>
-            <option value="manager">Manager</option>
           </select>
         </div>
       </div>

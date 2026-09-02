@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import {
   canCreateLpo,
   canInvoice,
+  canManageAccounts,
   canViewManagerDashboard,
   type Actor,
 } from "@/lib/permissions";
@@ -44,6 +45,12 @@ export async function requireReadyUser(): Promise<User> {
 export async function requireManager(): Promise<User> {
   const user = await requireReadyUser();
   if (!canViewManagerDashboard(user)) redirect("/");
+  return user;
+}
+
+export async function requireAdmin(): Promise<User> {
+  const user = await requireReadyUser();
+  if (!canManageAccounts(user)) redirect("/");
   return user;
 }
 

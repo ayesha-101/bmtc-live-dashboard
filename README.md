@@ -18,12 +18,14 @@ audit trail is append-only.
   discover which usernames exist.
 - **Forced first-login password change** for every account a manager
   creates.
-- **RBAC**, enforced on the server in one place (`lib/permissions.ts`):
-  | Who | Sees |
+- **RBAC**, enforced on the server in one place (`lib/permissions.ts`).
+  Three roles with deliberately separate jobs:
+  | Who | Sees / does |
   |---|---|
   | Employee (producing dept) | only the LPOs they created — **no margin** |
-  | Employee (Sales Admin dept) | all `pending_invoice` LPOs, every dept — **no margin** |
-  | Manager | everything: all depts, all statuses, **margin**, full audit log |
+  | Employee (Sales Admin dept) | all `pending_invoice` LPOs, every dept — **no margin**; marks them Done |
+  | **Manager** (the BM) | **read-only** dashboard + activity across all depts, incl. **margin**. No edits, no invoicing, no accounts. |
+  | **Admin** | **accounts + security only**: creates every account (incl. the Manager), deactivates, resets passwords, unlocks lockouts. **Never** sees the dashboard, LPOs, margin, or invoices. |
 - **LPO lifecycle** — `quoted → converted_lpo → pending_invoice →
   invoiced`, plus `lost`. Every transition is written to `audit_log` in
   the **same transaction** as the change.

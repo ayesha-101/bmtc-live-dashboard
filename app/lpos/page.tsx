@@ -12,9 +12,12 @@ export default async function LposPage() {
   const user = await requireReadyUser();
   const actor = toActor(user);
 
-  // Sales Admin's home is the invoices queue, not this page.
-  if (!canCreateLpo(actor) && !isManager(actor)) redirect("/invoices");
+  // Only producing-department employees work this page. Everyone else is
+  // sent to their own home (dashboard / invoices / users).
+  if (!canCreateLpo(actor)) redirect("/");
 
+  // Employees never see margin or other people's records; the columns
+  // below are gated the same way the query is.
   const showMargin = canSeeMargin(actor);
   const showOwner = isManager(actor);
   const showActions = canCreateLpo(actor);
