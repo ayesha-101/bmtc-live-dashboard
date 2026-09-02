@@ -1,0 +1,123 @@
+// BMTC Live Dashboard — data model. Mirrors the project plan's three
+// tables (users / lpos / audit_log) with a few security-hardening columns
+// added (account lockout + deactivation). Postgres enums stand in for the
+// plan's TEXT + CHECK constraints — same guarantee, type-safe end to end.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// The four producing business units plus the Sales Admin function. Sales
+// Admin is modelled as a "department" per the plan: a Sales Admin is an
+// employee whose department is sales_admin, and that fact alone grants the
+// cross-department Pending Invoices view.
+enum Department {
+  electrical
+  urban
+  lightning
+  water
+  sales_admin
+}
+
+enum UserRole {
+  employee
+  manager
+}
+
+// A single LPO record that evolves through these statuses. quoted and
+// converted_lpo are set at creation; the approval-free plan moves an order
+// to pending_invoice, then a Sales Admin marks it invoiced; lost is
+// terminal.
+enum LpoStatus {
+  quoted
+  converted_lpo
+  pending_invoice
+  invoiced
+  lost
+}
+
+model User {
+  id                 Int        @id @default(autoincrement())
+  username           String     @unique
+  passwordHash       String     @map("password_hash")
+  fullName           String     @map("full_name")
+  department         Department
+  role               UserRole   @default(employee)
+  mustChangePassword Boolean    @default(true) @map("must_change_password")
+  // Deactivation revokes access on the user's next request (every guard
+  // re-checks the DB, not just the cookie).
+  isActive           Boolean    @default(true) @map("is_active")
+  // Brute-force lockout (plan Phase 2, item 5).
+  failedAttempts     Int        @default(0) @map("failed_attempts")
+  lockedUntil        DateTime?  @map("locked_until")
+  createdById        Int?       @map("created_by")
+  createdBy          User?      @relation("UserCreatedBy", fields: [createdById], references: [id])
+  createdUsers       User[]     @relation("UserCreatedBy")
+  createdAt          DateTime   @default(now()) @map("created_at")
+
+  lposCreated  Lpo[]      @relation("LpoCreatedBy")
+  lposInvoiced Lpo[]      @relation("LpoInvoicedBy")
+  auditEntries AuditLog[]
+
+  @@map("users")
+}
+
+model Lpo {
+  id             Int        @id @default(autoincrement())
+  reference      String     @unique
+  department     Department
+  createdById    Int        @map("created_by")
+  createdBy      User       @relation("LpoCreatedBy", fields: [createdById], references: [id])
+  projectName    String     @map("project_name")
+  amount         Decimal    @db.Decimal(14, 2)
+  // Internal margin — only ever read into a manager's responses.
+  margin         Decimal?   @db.Decimal(14, 2)
+  status         LpoStatus  @default(quoted)
+  customerLpoRef String?    @map("customer_lpo_ref")
+  invoicedById   Int?       @map("invoiced_by")
+  invoicedBy     User?      @relation("LpoInvoicedBy", fields: [invoicedById], references: [id])
+  invoicedAt     DateTime?  @map("invoiced_at")
+  createdAt      DateTime   @default(now()) @map("created_at")
+  updatedAt      DateTime   @updatedAt @map("updated_at")
+
+  auditEntries AuditLog[]
+
+  @@index([status])
+  @@index([createdById])
+  @@map("lpos")
+}
+
+// Append-only audit trail. The application DB role should NOT hold DELETE
+// or UPDATE on this table (see README Phase 6) so the log can't be
+// rewritten even by a bug. Every write here happens in the same
+// transaction as the business change that caused it.
+model AuditLog {
+  id         Int        @id @default(autoincrement())
+  lpoId      Int        @map("lpo_id")
+  lpo        Lpo        @relation(fields: [lpoId], references: [id])
+  actorId    Int        @map("actor_id")
+  actor      User       @relation(fields: [actorId], references: [id])
+  department Department
+  action     String
+  note       String?
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([lpoId])
+  @@map("audit_log")
+}
+
+// Backs the human-readable LPO reference (BMTC-JIH-YYYYMM-<value>). A
+// single row incremented with an atomic upsert so two concurrent creates
+// can never mint the same reference.
+model Counter {
+  id    String @id
+  value Int    @default(1396)
+
+  @@map("counters")
+}
