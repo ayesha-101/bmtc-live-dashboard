@@ -62,6 +62,7 @@ export default async function UsersPage() {
                     role={u.role}
                     department={u.department}
                     email={u.email}
+                    fullName={u.fullName}
                   />
                 </td>
               </tr>

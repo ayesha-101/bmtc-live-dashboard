@@ -14,6 +14,7 @@ export default function UserRowActions({
   role,
   department,
   email,
+  fullName,
 }: {
   userId: number;
   isActive: boolean;
@@ -21,6 +22,7 @@ export default function UserRowActions({
   role: UserRole;
   department: Department;
   email: string;
+  fullName: string;
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +73,10 @@ export default function UserRowActions({
   if (editing) {
     return (
       <form action={save} style={{ minWidth: 260 }}>
+        <div className="field" style={{ marginBottom: 8 }}>
+          <label>Full name</label>
+          <input name="fullName" defaultValue={fullName} required maxLength={120} />
+        </div>
         <div className="field" style={{ marginBottom: 8 }}>
           <label>Email (used to sign in)</label>
           <input name="email" type="email" defaultValue={email} required />

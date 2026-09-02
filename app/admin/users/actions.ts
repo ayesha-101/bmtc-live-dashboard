@@ -103,6 +103,7 @@ export async function resetPasswordAction(userId: number): Promise<UserActionRes
 
 const updateUserSchema = z.object({
   email: z.string().trim().toLowerCase().min(3).max(160).email("Enter a valid email address"),
+  fullName: z.string().trim().min(1, "Full name is required").max(120),
   role: z.nativeEnum(UserRole),
   department: z.nativeEnum(Department),
 });
@@ -118,13 +119,14 @@ export async function updateUserAction(
 
   const parsed = updateUserSchema.safeParse({
     email: formData.get("email"),
+    fullName: formData.get("fullName"),
     role: formData.get("role"),
     department: formData.get("department"),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Pick a valid email, role and department." };
   }
-  const { email, role, department } = parsed.data;
+  const { email, fullName, role, department } = parsed.data;
 
   const target = await prisma.user.findUnique({ where: { id: userId } });
   if (!target) return { error: "User not found." };
@@ -147,7 +149,7 @@ export async function updateUserAction(
   try {
     await prisma.user.update({
       where: { id: userId },
-      data: { email, role, department },
+      data: { email, fullName, role, department },
     });
   } catch (e) {
     if (e instanceof Error && "code" in e && (e as { code?: string }).code === "P2002") {
