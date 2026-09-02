@@ -77,8 +77,11 @@ export default function UserRowActions({
         </div>
         <div className="field" style={{ marginBottom: 8 }}>
           <label>Role</label>
+          {/* A disabled control is not submitted by the browser, which would
+              send role=null. On your own row the picker is disabled for
+              safety, so the current role travels in a hidden field. */}
           <select
-            name="role"
+            name={isSelf ? undefined : "role"}
             value={draftRole}
             disabled={isSelf}
             onChange={(e) => setDraftRole(e.target.value as UserRole)}
@@ -87,6 +90,7 @@ export default function UserRowActions({
             <option value="manager">Manager (BM) — dashboard only</option>
             <option value="admin">Admin — accounts &amp; security</option>
           </select>
+          {isSelf && <input type="hidden" name="role" value={role} />}
         </div>
         <div className="field" style={{ marginBottom: 8 }}>
           <label>
