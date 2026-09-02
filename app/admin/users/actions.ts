@@ -10,7 +10,7 @@ import { Department, UserRole } from "@prisma/client";
 
 export interface CreateUserResult {
   error?: string;
-  username?: string;
+  email?: string;
   tempPassword?: string;
 }
 
@@ -21,7 +21,7 @@ export async function createUserAction(
   const manager = await requireAdmin();
 
   const parsed = createUserSchema.safeParse({
-    username: formData.get("username"),
+    email: formData.get("email"),
     fullName: formData.get("fullName"),
     department: formData.get("department"),
     role: formData.get("role"),
@@ -36,7 +36,7 @@ export async function createUserAction(
   try {
     await prisma.user.create({
       data: {
-        username: parsed.data.username,
+        email: parsed.data.email,
         fullName: parsed.data.fullName,
         department: parsed.data.department,
         role: parsed.data.role,
@@ -47,13 +47,13 @@ export async function createUserAction(
     });
   } catch (e) {
     if (e instanceof Error && "code" in e && (e as { code?: string }).code === "P2002") {
-      return { error: "That username is already taken." };
+      return { error: "That email address is already registered." };
     }
     throw e;
   }
 
   revalidatePath("/admin/users");
-  return { username: parsed.data.username, tempPassword };
+  return { email: parsed.data.email, tempPassword };
 }
 
 export interface UserActionResult {

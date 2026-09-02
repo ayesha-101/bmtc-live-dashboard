@@ -16,7 +16,7 @@ export default async function SecurityPage() {
   const users = await prisma.user.findMany({
     select: {
       id: true,
-      username: true,
+      email: true,
       fullName: true,
       role: true,
       isActive: true,
@@ -78,7 +78,7 @@ export default async function SecurityPage() {
               <thead>
                 <tr>
                   <th>Name</th>
-                  <th>Username</th>
+                  <th>Email</th>
                   <th>Role</th>
                   <th>Failed attempts</th>
                   <th>Locked until</th>
@@ -89,7 +89,7 @@ export default async function SecurityPage() {
                 {[...locked, ...failing].map((u) => (
                   <tr key={u.id}>
                     <td>{u.fullName}</td>
-                    <td className="mono">{u.username}</td>
+                    <td className="mono">{u.email}</td>
                     <td>{ROLE_LABELS[u.role]}</td>
                     <td className="mono">{u.failedAttempts}</td>
                     <td className="mono">
@@ -114,7 +114,7 @@ export default async function SecurityPage() {
           ) : (
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
               {pendingReset.map((u) => (
-                <li key={u.id}>{u.fullName} <span className="mono muted">({u.username})</span></li>
+                <li key={u.id}>{u.fullName} <span className="mono muted">({u.email})</span></li>
               ))}
             </ul>
           )}
@@ -126,7 +126,7 @@ export default async function SecurityPage() {
           ) : (
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
               {inactive.map((u) => (
-                <li key={u.id}>{u.fullName} <span className="mono muted">({u.username})</span></li>
+                <li key={u.id}>{u.fullName} <span className="mono muted">({u.email})</span></li>
               ))}
             </ul>
           )}

@@ -24,7 +24,7 @@ export default function CreateUserForm() {
       {state.error && <div className="note error">{state.error}</div>}
       {state.tempPassword && (
         <div className="note success">
-          Account <b>{state.username}</b> created. One-time password (shown once):{" "}
+          Account <b>{state.email}</b> created. One-time password (shown once):{" "}
           <b className="mono">{state.tempPassword}</b>. Share it securely — they must
           change it at first sign-in.
         </div>
@@ -32,8 +32,14 @@ export default function CreateUserForm() {
 
       <div className="form-grid">
         <div className="field">
-          <label htmlFor="username">Username (English letters, numbers, . _ - only)</label>
-          <input id="username" name="username" required placeholder="e.g. a.hassan" />
+          <label htmlFor="email">Email (this is what they sign in with)</label>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            required
+            placeholder="e.g. ahmed@bmtc.com"
+          />
         </div>
         <div className="field">
           <label htmlFor="fullName">Full name</label>

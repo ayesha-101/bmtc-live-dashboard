@@ -10,12 +10,12 @@ audit trail is append-only.
 
 ## What it does
 
-- **Auth** — username + password (bcrypt, 12 rounds), signed **httpOnly**
+- **Auth** — email + password (bcrypt, 12 rounds), signed **httpOnly**
   session cookie (JWT via `jose`, 8-hour expiry). No public sign-up.
 - **Brute-force defenses** — per-IP rate limit on login **and** a
   DB-backed account lockout (5 failed attempts → 15 minutes). Login is
   constant-time and returns one generic error, so it can't be used to
-  discover which usernames exist.
+  discover which emails are registered.
 - **Forced first-login password change** for every account a manager
   creates.
 - **RBAC**, enforced on the server in one place (`lib/permissions.ts`).

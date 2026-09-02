@@ -15,14 +15,14 @@ async function main() {
     return;
   }
 
-  const username = process.env.SEED_ADMIN_USERNAME || "admin";
+  const email = (process.env.SEED_ADMIN_EMAIL || "admin@bmtc.local").toLowerCase();
   const fullName = process.env.SEED_ADMIN_NAME || "System Admin";
   const tempPassword = generateTempPassword();
   const passwordHash = await hashPassword(tempPassword);
 
   await prisma.user.create({
     data: {
-      username,
+      email,
       fullName,
       passwordHash,
       department: "electrical",
@@ -34,7 +34,7 @@ async function main() {
   console.log("\n=========================================");
   console.log(" Initial Admin account created");
   console.log("=========================================");
-  console.log(` Username: ${username}`);
+  console.log(` Email:    ${email}`);
   console.log(` Password: ${tempPassword}`);
   console.log("=========================================");
   console.log(" Sign in, set a real password, then add everyone else");

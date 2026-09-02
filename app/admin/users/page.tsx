@@ -35,7 +35,7 @@ export default async function UsersPage() {
           <thead>
             <tr>
               <th>Name</th>
-              <th>Username</th>
+              <th>Email</th>
               <th>Role</th>
               <th>Department</th>
               <th>Status</th>
@@ -46,7 +46,7 @@ export default async function UsersPage() {
             {users.map((u) => (
               <tr key={u.id}>
                 <td>{u.fullName}</td>
-                <td className="mono">{u.username}</td>
+                <td className="mono">{u.email}</td>
                 <td>{ROLE_LABELS[u.role]}</td>
                 <td>{u.role === "employee" ? DEPARTMENT_LABELS[u.department] : "—"}</td>
                 <td>

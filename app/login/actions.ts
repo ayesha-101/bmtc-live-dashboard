@@ -18,15 +18,15 @@ const LOCK_MINUTES = 15;
 // One deliberately vague message for every failure — wrong user, wrong
 // password, or locked account all look identical, so the form can't be
 // used to discover which usernames exist.
-const GENERIC_ERROR = "Incorrect username or password.";
+const GENERIC_ERROR = "Incorrect email or password.";
 
 export async function loginAction(_prev: LoginResult, formData: FormData): Promise<LoginResult> {
   const parsed = loginSchema.safeParse({
-    username: formData.get("username"),
+    email: formData.get("email"),
     password: formData.get("password"),
   });
   if (!parsed.success) return { error: GENERIC_ERROR };
-  const { username, password } = parsed.data;
+  const { email, password } = parsed.data;
 
   // Per-instance throttle in front of the DB lockout.
   sweepRateLimiter();
@@ -37,7 +37,7 @@ export async function loginAction(_prev: LoginResult, formData: FormData): Promi
     return { error: `Too many attempts. Try again in ${limit.retryAfterSec}s.` };
   }
 
-  const user = await prisma.user.findUnique({ where: { username } });
+  const user = await prisma.user.findUnique({ where: { email } });
 
   // Account currently locked? Still burn a bcrypt compare so the timing
   // matches the normal path, then return the same generic error.

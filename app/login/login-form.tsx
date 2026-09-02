@@ -12,8 +12,18 @@ export default function LoginForm() {
     <form action={formAction}>
       {state.error && <div className="note error">{state.error}</div>}
       <div className="field">
-        <label htmlFor="username">Username</label>
-        <input id="username" name="username" autoComplete="username" autoFocus required />
+        <label htmlFor="email">Email</label>
+        {/* type="text", not "email": the browser must not block sign-in for
+            an account created before the email switch. */}
+        <input
+          id="email"
+          name="email"
+          type="text"
+          inputMode="email"
+          autoComplete="email"
+          autoFocus
+          required
+        />
       </div>
       <div className="field">
         <label htmlFor="password">Password</label>

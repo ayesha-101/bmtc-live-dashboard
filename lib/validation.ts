@@ -5,7 +5,10 @@ import { Department, UserRole } from "@prisma/client";
 // the database (plan Phase 6).
 
 export const loginSchema = z.object({
-  username: z.string().trim().min(1, "Username is required").max(60),
+  // Deliberately not .email() here: this is only a lookup key, and any
+  // legacy account created before the email switch must still be able to
+  // sign in. Format is enforced where accounts are *created*, below.
+  email: z.string().trim().toLowerCase().min(1, "Email is required").max(160),
   password: z.string().min(1, "Password is required").max(200),
 });
 
@@ -27,12 +30,13 @@ export const createLpoSchema = z.object({
 });
 
 export const createUserSchema = z.object({
-  username: z
+  email: z
     .string()
     .trim()
-    .min(3, "Username must be at least 3 characters")
-    .max(60)
-    .regex(/^[a-zA-Z0-9._-]+$/, "Letters, numbers, dot, underscore, hyphen only"),
+    .toLowerCase()
+    .min(3)
+    .max(160)
+    .email("Enter a valid email address"),
   fullName: z.string().trim().min(1, "Full name is required").max(120),
   department: z.nativeEnum(Department),
   role: z.nativeEnum(UserRole),
@@ -43,7 +47,7 @@ export const changePasswordSchema = z
     currentPassword: z.string().min(1, "Enter your current password"),
     newPassword: z
       .string()
-      .min(10, "New password must be at least 10 characters")
+      .min(5, "New password must be at least 5 characters")
       .max(200),
     confirmPassword: z.string(),
   })
