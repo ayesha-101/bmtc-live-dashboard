@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
+import { verifyChain } from "@/lib/audit";
 
 export interface SecurityActionResult {
   error?: string;
@@ -22,4 +23,24 @@ export async function unlockAccountAction(userId: number): Promise<SecurityActio
   });
   revalidatePath("/admin/security");
   return { success: true };
+}
+
+export interface ChainCheckResult {
+  error?: string;
+  valid?: boolean;
+  total?: number;
+  brokenAtId?: number | null;
+  reason?: string | null;
+}
+
+// Re-derives every audit hash and reports the first mismatch. Admin only.
+export async function verifyChainAction(): Promise<ChainCheckResult> {
+  await requireAdmin();
+  const result = await verifyChain(prisma);
+  return {
+    valid: result.valid,
+    total: result.total,
+    brokenAtId: result.brokenAtId,
+    reason: result.reason,
+  };
 }

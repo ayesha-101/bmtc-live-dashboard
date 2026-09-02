@@ -5,6 +5,7 @@ import {
   canCreateLpo,
   canInvoice,
   canManageAccounts,
+  canViewMonitoring,
   canViewManagerDashboard,
   type Actor,
 } from "@/lib/permissions";
@@ -45,6 +46,12 @@ export async function requireReadyUser(): Promise<User> {
 export async function requireManager(): Promise<User> {
   const user = await requireReadyUser();
   if (!canViewManagerDashboard(user)) redirect("/");
+  return user;
+}
+
+export async function requireMonitor(): Promise<User> {
+  const user = await requireReadyUser();
+  if (!canViewMonitoring(user)) redirect("/");
   return user;
 }
 

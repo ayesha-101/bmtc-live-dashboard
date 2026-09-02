@@ -1,4 +1,5 @@
 :root {
+  color-scheme: light;
   --bg: #f4f6fa;
   --panel: #ffffff;
   --panel-2: #f0f3f8;
@@ -18,26 +19,8 @@
   --shadow: 0 1px 2px rgba(20, 30, 55, 0.06), 0 4px 16px rgba(20, 30, 55, 0.05);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0d1220;
-    --panel: #141b2d;
-    --panel-2: #1b2437;
-    --ink: #e8edf6;
-    --ink-dim: #aeb9cd;
-    --ink-faint: #6f7c93;
-    --line: #26314a;
-    --brand: #4f8dfb;
-    --brand-ink: #06122b;
-    --green: #3ecf8e;
-    --green-bg: rgba(62, 207, 142, 0.14);
-    --amber: #e0a52e;
-    --amber-bg: rgba(224, 165, 46, 0.16);
-    --red: #f26d6d;
-    --red-bg: rgba(242, 109, 109, 0.15);
-    --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 20px rgba(0, 0, 0, 0.25);
-  }
-}
+/* Day mode only: the app deliberately does not follow the operating
+   system's dark theme — the palette above is the single look. */
 
 * { box-sizing: border-box; }
 

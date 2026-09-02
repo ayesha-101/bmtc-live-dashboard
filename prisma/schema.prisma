@@ -111,6 +111,11 @@ model AuditLog {
   action     String
   note       String?
   createdAt  DateTime   @default(now()) @map("created_at")
+  // Blockchain-style tamper evidence: each entry's hash covers its own
+  // fields PLUS the previous entry's hash, so editing or deleting any past
+  // row breaks every hash after it and the chain check fails loudly.
+  prevHash   String     @default("") @map("prev_hash")
+  hash       String     @default("") @map("hash")
 
   @@index([createdAt])
   @@index([lpoId])

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import AppShell from "@/app/components/app-shell";
 import LivePoll from "@/app/components/live-poll";
 import UnlockButton from "./unlock-button";
+import ChainCard from "./chain-card";
 
 const ROLE_LABELS = { employee: "Employee", manager: "Manager", admin: "Admin" } as const;
 
@@ -13,6 +14,7 @@ export default async function SecurityPage() {
   const admin = await requireAdmin();
   const now = new Date();
 
+  const auditCount = await prisma.auditLog.count();
   const users = await prisma.user.findMany({
     select: {
       id: true,
@@ -67,6 +69,8 @@ export default async function SecurityPage() {
           <div className="kpi-sub">keep this number small</div>
         </div>
       </div>
+
+      <ChainCard total={auditCount} />
 
       <div className="card section-gap">
         <h2>Lockouts &amp; failed attempts</h2>

@@ -52,6 +52,14 @@ export function canViewManagerDashboard(user: Actor): boolean {
   return isManager(user);
 }
 
+// Who may read the monitoring trail: the BM (oversight of what the team
+// did) and the admin (security accountability). It shows WHO did WHAT and
+// WHEN — never amounts or margin — so it does not leak business figures to
+// the admin.
+export function canViewMonitoring(user: Actor): boolean {
+  return isManager(user) || isAdmin(user);
+}
+
 // Who may create accounts, deactivate them, reset passwords, and monitor
 // account security: the admin only.
 export function canManageAccounts(user: Actor): boolean {
