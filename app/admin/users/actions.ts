@@ -101,29 +101,30 @@ export async function resetPasswordAction(userId: number): Promise<UserActionRes
   return { success: true, tempPassword };
 }
 
-const changeRoleSchema = z.object({
+const updateUserSchema = z.object({
+  email: z.string().trim().toLowerCase().min(3).max(160).email("Enter a valid email address"),
   role: z.nativeEnum(UserRole),
   department: z.nativeEnum(Department),
 });
 
-// Change an existing account's role (and, for employees, department).
+// Edit an existing account's email, role, and (for employees) department.
 // Two guards keep the system from becoming unadministrable: an admin can't
 // change their own role, and the last active admin can't be demoted.
-export async function changeRoleAction(
+export async function updateUserAction(
   userId: number,
   formData: FormData
 ): Promise<UserActionResult> {
   const admin = await requireAdmin();
-  if (userId === admin.id) {
-    return { error: "You can't change your own role." };
-  }
 
-  const parsed = changeRoleSchema.safeParse({
+  const parsed = updateUserSchema.safeParse({
+    email: formData.get("email"),
     role: formData.get("role"),
     department: formData.get("department"),
   });
-  if (!parsed.success) return { error: "Pick a valid role and department." };
-  const { role, department } = parsed.data;
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Pick a valid email, role and department." };
+  }
+  const { email, role, department } = parsed.data;
 
   const target = await prisma.user.findUnique({ where: { id: userId } });
   if (!target) return { error: "User not found." };
@@ -137,10 +138,67 @@ export async function changeRoleAction(
     }
   }
 
-  await prisma.user.update({
+  // Changing your own role could lock you out of administration entirely,
+  // so it is refused — but you may still correct your own email.
+  if (userId === admin.id && role !== admin.role) {
+    return { error: "You can't change your own role." };
+  }
+
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { email, role, department },
+    });
+  } catch (e) {
+    if (e instanceof Error && "code" in e && (e as { code?: string }).code === "P2002") {
+      return { error: "That email address is already registered." };
+    }
+    throw e;
+  }
+  revalidatePath("/admin/users");
+  revalidatePath("/admin/security");
+  return { success: true };
+}
+
+// Permanently delete an account. Only possible while it has no history:
+// an account that created LPOs or wrote audit entries must be deactivated
+// instead, so the audit trail can never be orphaned or rewritten.
+export async function deleteUserAction(userId: number): Promise<UserActionResult> {
+  const admin = await requireAdmin();
+  if (userId === admin.id) {
+    return { error: "You can't delete your own account." };
+  }
+
+  const target = await prisma.user.findUnique({
     where: { id: userId },
-    data: { role, department },
+    include: {
+      _count: { select: { lposCreated: true, lposInvoiced: true, auditEntries: true } },
+    },
   });
+  if (!target) return { error: "User not found." };
+
+  const history =
+    target._count.lposCreated + target._count.lposInvoiced + target._count.auditEntries;
+  if (history > 0) {
+    return {
+      error: `This account has ${history} linked record(s) and can't be deleted — deactivate it instead.`,
+    };
+  }
+
+  if (target.role === "admin" && target.isActive) {
+    const activeAdmins = await prisma.user.count({ where: { role: "admin", isActive: true } });
+    if (activeAdmins <= 1) {
+      return { error: "This is the last active admin — create another admin first." };
+    }
+  }
+
+  // Clear the self-referencing createdBy pointer on anyone this account
+  // created, so the delete can't fail on a foreign key.
+  await prisma.$transaction(async (tx) => {
+    await tx.user.updateMany({ where: { createdById: userId }, data: { createdById: null } });
+    await tx.user.delete({ where: { id: userId } });
+  });
+
   revalidatePath("/admin/users");
   revalidatePath("/admin/security");
   return { success: true };

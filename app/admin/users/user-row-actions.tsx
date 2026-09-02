@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import type { Department, UserRole } from "@prisma/client";
-import { toggleActiveAction, resetPasswordAction, changeRoleAction } from "./actions";
+import { toggleActiveAction, resetPasswordAction, updateUserAction, deleteUserAction } from "./actions";
 import { DEPARTMENT_LABELS } from "@/lib/format";
 
 const DEPARTMENTS: Department[] = ["electrical", "urban", "lightning", "water", "sales_admin"];
@@ -13,20 +13,20 @@ export default function UserRowActions({
   isSelf,
   role,
   department,
+  email,
 }: {
   userId: number;
   isActive: boolean;
   isSelf: boolean;
   role: UserRole;
   department: Department;
+  email: string;
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [temp, setTemp] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [draftRole, setDraftRole] = useState<UserRole>(role);
-
-  if (isSelf) return <span className="muted">— you —</span>;
 
   function toggle() {
     setError(null);
@@ -48,24 +48,39 @@ export default function UserRowActions({
     });
   }
 
-  function saveRole(formData: FormData) {
+  function save(formData: FormData) {
     setError(null);
     setTemp(null);
     startTransition(async () => {
-      const res = await changeRoleAction(userId, formData);
+      const res = await updateUserAction(userId, formData);
       if (res.error) setError(res.error);
       else setEditing(false);
     });
   }
 
+  function remove() {
+    if (!confirm("Permanently delete this account? This cannot be undone.")) return;
+    setError(null);
+    setTemp(null);
+    startTransition(async () => {
+      const res = await deleteUserAction(userId);
+      if (res.error) setError(res.error);
+    });
+  }
+
   if (editing) {
     return (
-      <form action={saveRole} style={{ minWidth: 260 }}>
+      <form action={save} style={{ minWidth: 260 }}>
+        <div className="field" style={{ marginBottom: 8 }}>
+          <label>Email (used to sign in)</label>
+          <input name="email" type="email" defaultValue={email} required />
+        </div>
         <div className="field" style={{ marginBottom: 8 }}>
           <label>Role</label>
           <select
             name="role"
             value={draftRole}
+            disabled={isSelf}
             onChange={(e) => setDraftRole(e.target.value as UserRole)}
           >
             <option value="employee">Employee</option>
@@ -84,6 +99,11 @@ export default function UserRowActions({
             ))}
           </select>
         </div>
+        {isSelf && (
+          <p className="muted" style={{ marginTop: 0, marginBottom: 8 }}>
+            You can correct your own email, but not your own role.
+          </p>
+        )}
         {draftRole === "employee" && (
           <p className="muted" style={{ marginTop: 0, marginBottom: 8 }}>
             Pick <b>Sales Admin</b> as the department to give this person the
@@ -106,14 +126,21 @@ export default function UserRowActions({
   return (
     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
       <button className="btn" disabled={pending} onClick={() => { setDraftRole(role); setEditing(true); }}>
-        Edit role
+        Edit
       </button>
-      <button className="btn" disabled={pending} onClick={toggle}>
-        {isActive ? "Deactivate" : "Reactivate"}
-      </button>
-      <button className="btn" disabled={pending} onClick={reset}>
-        Reset password
-      </button>
+      {!isSelf && (
+        <>
+          <button className="btn" disabled={pending} onClick={toggle}>
+            {isActive ? "Deactivate" : "Reactivate"}
+          </button>
+          <button className="btn" disabled={pending} onClick={reset}>
+            Reset password
+          </button>
+          <button className="btn danger" disabled={pending} onClick={remove}>
+            Delete
+          </button>
+        </>
+      )}
       {temp && (
         <div className="note success" style={{ width: "100%", margin: 0 }}>
           New one-time password: <b className="mono">{temp}</b>

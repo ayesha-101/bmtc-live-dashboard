@@ -61,6 +61,7 @@ export default async function UsersPage() {
                     isSelf={u.id === admin.id}
                     role={u.role}
                     department={u.department}
+                    email={u.email}
                   />
                 </td>
               </tr>
