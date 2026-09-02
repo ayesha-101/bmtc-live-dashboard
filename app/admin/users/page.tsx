@@ -55,7 +55,13 @@ export default async function UsersPage() {
                   </span>
                 </td>
                 <td>
-                  <UserRowActions userId={u.id} isActive={u.isActive} isSelf={u.id === admin.id} />
+                  <UserRowActions
+                    userId={u.id}
+                    isActive={u.isActive}
+                    isSelf={u.id === admin.id}
+                    role={u.role}
+                    department={u.department}
+                  />
                 </td>
               </tr>
             ))}
