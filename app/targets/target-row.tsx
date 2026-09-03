@@ -20,6 +20,12 @@ export default function TargetRow({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  // Live so the BM can sanity-check the two figures against each other as
+  // they type: GP ÷ revenue is the margin the target implies.
+  const [revenue, setRevenue] = useState(revenueTarget ?? 0);
+  const [gp, setGp] = useState(gpTarget ?? 0);
+  const marginPct = revenue > 0 ? (gp / revenue) * 100 : 0;
+  const marginOk = gp <= revenue;
 
   function submit(formData: FormData) {
     setError(null);
@@ -31,15 +37,23 @@ export default function TargetRow({
     });
   }
 
-  const monthly = revenueTarget ? revenueTarget / 12 : 0;
+  const monthly = revenue > 0 ? revenue / 12 : 0;
+  const monthlyGp = gp > 0 ? gp / 12 : 0;
 
   return (
     <form action={submit} className="card" style={{ marginBottom: 14 }}>
       <div className="row-between" style={{ marginBottom: 12 }}>
         <strong>{label}</strong>
-        {monthly > 0 && (
-          <span className="muted">
-            monthly ≈ AED {monthly.toLocaleString("en-AE", { maximumFractionDigits: 0 })}
+        {revenue > 0 && (
+          <span
+            className="mono"
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: !marginOk ? "var(--red)" : marginPct > 0 ? "var(--green)" : "var(--ink-faint)",
+            }}
+          >
+            {marginPct.toFixed(1)}% GP margin
           </span>
         )}
       </div>
@@ -55,6 +69,7 @@ export default function TargetRow({
             required
             defaultValue={revenueTarget ?? undefined}
             placeholder="0.00"
+            onChange={(e) => setRevenue(Number(e.target.value) || 0)}
           />
         </div>
         <div className="field">
@@ -67,9 +82,31 @@ export default function TargetRow({
             required
             defaultValue={gpTarget ?? undefined}
             placeholder="0.00"
+            onChange={(e) => setGp(Number(e.target.value) || 0)}
           />
         </div>
       </div>
+      {monthly > 0 && (
+        <div
+          className="kpi-sub"
+          style={{
+            display: "grid", gap: 3, marginBottom: 12,
+            borderTop: "1px solid var(--line)", paddingTop: 8,
+          }}
+        >
+          <div className="row-between">
+            <span>Monthly revenue (target ÷ 12)</span>
+            <span className="mono">AED {monthly.toLocaleString("en-AE", { maximumFractionDigits: 0 })}</span>
+          </div>
+          <div className="row-between">
+            <span>Monthly GP</span>
+            <span className="mono">AED {monthlyGp.toLocaleString("en-AE", { maximumFractionDigits: 0 })}</span>
+          </div>
+        </div>
+      )}
+      {!marginOk && (
+        <div className="note error">The GP target is higher than the revenue target — check the figures.</div>
+      )}
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <button type="submit" className="btn primary" disabled={pending}>
           {pending ? "Saving…" : "Save target"}
