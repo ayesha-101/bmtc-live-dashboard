@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { requireReadyUser, toActor } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { canCreateLpo, canSeeMargin, dealListScope, isManager } from "@/lib/permissions";
-import { DEPARTMENT_LABELS, STAGE_LABELS, formatAED, formatDate } from "@/lib/format";
+import { DEPARTMENT_SHORT, STAGE_LABELS, formatAED, formatDate } from "@/lib/format";
 import AppShell from "@/app/components/app-shell";
 import LivePoll from "@/app/components/live-poll";
 import NewDealForm from "./new-deal-form";
@@ -79,7 +79,7 @@ export default async function DealsPage() {
                   <tr key={d.id}>
                     <td className="mono">{formatDate(d.enquiryDate)}</td>
                     <td>{d.enquiryDate.toLocaleDateString("en-GB", { month: "short", year: "2-digit" })}</td>
-                    {showOwner && <td>{DEPARTMENT_LABELS[d.department]}</td>}
+                    {showOwner && <td>{DEPARTMENT_SHORT[d.department]}</td>}
                     <td>{d.customer}</td>
                     <td>{d.projectName}</td>
                     <td>{d.salesPerson || "—"}</td>

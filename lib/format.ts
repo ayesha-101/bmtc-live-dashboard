@@ -8,10 +8,22 @@ export function formatAED(n: number): string {
 // function, not a producing unit, so it's excluded from those cards).
 export const PRODUCING_DEPARTMENTS: Department[] = ["electrical", "urban", "lightning", "water"];
 
+// Display names. The stored enum values stay as they are (changing them
+// would mean migrating every existing row for no user-visible gain) — note
+// the `lightning` value is a historic typo for Lighting, corrected here.
 export const DEPARTMENT_LABELS: Record<Department, string> = {
+  electrical: "Electrical Solution",
+  urban: "Urban Solution",
+  lightning: "Lighting Solution",
+  water: "Water Solution",
+  sales_admin: "Sales Admin",
+};
+
+// Short form for tight spaces (table cells, pills).
+export const DEPARTMENT_SHORT: Record<Department, string> = {
   electrical: "Electrical",
   urban: "Urban",
-  lightning: "Lightning",
+  lightning: "Lighting",
   water: "Water",
   sales_admin: "Sales Admin",
 };

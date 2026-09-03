@@ -60,6 +60,9 @@ export interface DeptReport {
 export interface Report {
   period: PeriodKey;
   comparable: boolean;
+  // The exact window on screen, so the page can label it unambiguously.
+  from: Date | null;
+  to: Date | null;
   byDepartment: DeptReport[];
   totals: Omit<DeptReport, "department">;
 }
@@ -184,5 +187,5 @@ export async function buildReport(period: PeriodKey, now = new Date()): Promise<
   totals.revenueAchieved = pct(totals.revenue, totals.revenueTarget);
   totals.gpAchieved = pct(totals.gp, totals.gpTarget);
 
-  return { period, comparable, byDepartment: list, totals };
+  return { period, comparable, from, to, byDepartment: list, totals };
 }

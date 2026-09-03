@@ -1,6 +1,6 @@
 import { requireInvoicer } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { DEPARTMENT_LABELS, formatAED, formatDate } from "@/lib/format";
+import { DEPARTMENT_SHORT, formatAED, formatDate } from "@/lib/format";
 import AppShell from "@/app/components/app-shell";
 import LivePoll from "@/app/components/live-poll";
 import InvoiceRowActions from "./invoice-row-actions";
@@ -63,7 +63,7 @@ export default async function InvoicesPage() {
               pending.map((d) => (
                 <tr key={d.id}>
                   <td className="mono">{d.reference}</td>
-                  <td>{DEPARTMENT_LABELS[d.department]}</td>
+                  <td>{DEPARTMENT_SHORT[d.department]}</td>
                   <td>{d.customer}</td>
                   <td>{d.projectName}</td>
                   <td className="mono">{d.lpoRef || "—"}</td>
@@ -98,7 +98,7 @@ export default async function InvoicesPage() {
                 {recent.map((d) => (
                   <tr key={d.id}>
                     <td className="mono">{d.reference}</td>
-                    <td>{DEPARTMENT_LABELS[d.department]}</td>
+                    <td>{DEPARTMENT_SHORT[d.department]}</td>
                     <td>{d.customer}</td>
                     <td className="mono">{d.invoiceRef}</td>
                     <td className="mono">{d.invoiceValue === null ? "—" : formatAED(Number(d.invoiceValue))}</td>

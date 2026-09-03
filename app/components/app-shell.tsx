@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { User } from "@prisma/client";
 import { toActor } from "@/lib/auth";
 import { canCreateLpo, canInvoice, canManageAccounts, canSetTargets, canViewMonitoring, isManager } from "@/lib/permissions";
-import { DEPARTMENT_LABELS } from "@/lib/format";
+import { DEPARTMENT_SHORT } from "@/lib/format";
 import { logoutAction } from "@/app/logout/actions";
 
 export type Section = "dashboard" | "deals" | "invoices" | "targets" | "monitoring" | "users" | "security";
@@ -42,7 +42,7 @@ export default function AppShell({
           <div className="header-user">
             <span>{user.fullName}</span>
             <span className="pill brand">{ROLE_LABELS[user.role]}</span>
-            {user.role === "employee" && <span className="pill">{DEPARTMENT_LABELS[user.department]}</span>}
+            {user.role === "employee" && <span className="pill">{DEPARTMENT_SHORT[user.department]}</span>}
             <form action={logoutAction}>
               <button type="submit" className="btn" style={{ padding: "6px 12px", fontSize: 12 }}>
                 Sign out

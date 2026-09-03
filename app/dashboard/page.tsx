@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireManager } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { buildReport, isPeriodKey, PERIOD_LABELS, type PeriodKey } from "@/lib/overview";
-import { DEPARTMENT_LABELS, formatAED, timeAgo } from "@/lib/format";
+import { DEPARTMENT_LABELS, DEPARTMENT_SHORT, formatAED, formatDate, timeAgo } from "@/lib/format";
 import AppShell from "@/app/components/app-shell";
 import LivePoll from "@/app/components/live-poll";
 import { KpiCard, TargetBar } from "./kpi-card";
@@ -31,6 +31,12 @@ export default async function DashboardPage({
   ]);
   const { totals, byDepartment, comparable } = report;
 
+  // Spell the window out, so "This Month" is never ambiguous.
+  const rangeLabel =
+    period === "todate"
+      ? "Everything recorded so far"
+      : `${formatDate(report.from)} — today`;
+
   return (
     <AppShell user={user} active="dashboard">
       <LivePoll />
@@ -45,17 +51,21 @@ export default async function DashboardPage({
         <span className="muted"><span className="live-dot" />live</span>
       </div>
 
-      {/* Period switcher */}
-      <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
-        {PERIODS.map((p) => (
-          <Link
-            key={p}
-            href={`/dashboard?period=${p}`}
-            className={`btn${p === period ? " primary" : ""}`}
-          >
-            {PERIOD_LABELS[p]}
-          </Link>
-        ))}
+      {/* Period picker — the BM chooses monthly, yearly, or cumulative. */}
+      <div className="row-between section-gap">
+        <nav className="segmented">
+          {PERIODS.map((p) => (
+            <Link
+              key={p}
+              href={`/dashboard?period=${p}`}
+              className={p === period ? "on" : undefined}
+              aria-current={p === period ? "page" : undefined}
+            >
+              {PERIOD_LABELS[p]}
+            </Link>
+          ))}
+        </nav>
+        <span className="muted">{rangeLabel}</span>
       </div>
 
       <div className="grid kpi-grid section-gap">
@@ -113,7 +123,7 @@ export default async function DashboardPage({
                 <b>{a.actor.fullName}</b>: {a.action.replace(/_/g, " ")} on{" "}
                 <span className="mono">{a.deal.reference}</span>
                 <span className="muted"> · {a.deal.customer}</span>
-                <span className="pill" style={{ marginLeft: 8 }}>{DEPARTMENT_LABELS[a.department]}</span>
+                <span className="pill" style={{ marginLeft: 8 }}>{DEPARTMENT_SHORT[a.department]}</span>
               </div>
             ))}
           </div>

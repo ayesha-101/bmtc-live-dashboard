@@ -1,6 +1,6 @@
 import { requireMonitor } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { DEPARTMENT_LABELS, timeAgo } from "@/lib/format";
+import { DEPARTMENT_SHORT, timeAgo } from "@/lib/format";
 import AppShell from "@/app/components/app-shell";
 import LivePoll from "@/app/components/live-poll";
 
@@ -130,7 +130,7 @@ export default async function MonitoringPage() {
                   </td>
                   <td className="mono">{e.deal.reference}</td>
                   <td>{e.deal.customer}</td>
-                  <td>{DEPARTMENT_LABELS[e.department]}</td>
+                  <td>{DEPARTMENT_SHORT[e.department]}</td>
                   <td className="muted">{e.note || "—"}</td>
                 </tr>
               ))
