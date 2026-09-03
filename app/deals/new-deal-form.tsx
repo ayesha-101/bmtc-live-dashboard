@@ -50,6 +50,11 @@ export default function NewDealForm() {
         </div>
       </div>
 
+      <div className="field">
+        <label htmlFor="brand">Brand(s)</label>
+        <input id="brand" name="brand" maxLength={160} placeholder="e.g. Philips, Schneider" />
+      </div>
+
       <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, margin: "4px 0 14px" }}>
         <input
           type="checkbox"

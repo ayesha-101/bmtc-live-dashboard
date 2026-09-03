@@ -27,6 +27,7 @@ export const createDealSchema = z
     projectName: z.string().trim().min(1, "Project name is required").max(200),
     salesPerson: z.string().trim().max(120).optional().or(z.literal("")),
     deResponsible: z.string().trim().max(120).optional().or(z.literal("")),
+    brand: z.string().trim().max(160).optional().or(z.literal("")),
     // Quotation is optional at this point.
     quoteRef: z.string().trim().max(120).optional().or(z.literal("")),
     quoteValue: money("Quote value").optional(),
@@ -83,6 +84,7 @@ export const showroomSaleSchema = z
     customer: z.string().trim().min(1, "Customer is required").max(160),
     projectName: z.string().trim().min(1, "Description is required").max(200),
     salesPerson: z.string().trim().max(120).optional().or(z.literal("")),
+    brand: z.string().trim().max(160).optional().or(z.literal("")),
     lpoRef: z.string().trim().min(1, "LPO reference is required").max(120),
     lpoValue: money("Value"),
     lpoGp: money("GP").optional(),

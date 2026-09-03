@@ -59,6 +59,7 @@ export default async function DealsPage() {
               {showOwner && <th>Dept</th>}
               <th>Customer</th>
               <th>{showroom ? "Description" : "Project"}</th>
+              <th>Brand</th>
               <th>Sales person</th>
               {!showroom && <th>D&amp;E</th>}
               {!showroom && <th>Quote ref #</th>}
@@ -75,7 +76,7 @@ export default async function DealsPage() {
           </thead>
           <tbody>
             {deals.length === 0 ? (
-              <tr><td colSpan={18} className="empty-state">{showroom ? "No sales recorded yet." : "No enquiries yet."}</td></tr>
+              <tr><td colSpan={19} className="empty-state">{showroom ? "No sales recorded yet." : "No enquiries yet."}</td></tr>
             ) : (
               deals.map((d) => {
                 // The GP that matters at this stage: invoice → LPO → quote.
@@ -87,6 +88,7 @@ export default async function DealsPage() {
                     {showOwner && <td>{DEPARTMENT_SHORT[d.department]}</td>}
                     <td>{d.customer}</td>
                     <td>{d.projectName}</td>
+                    <td>{d.brand || "—"}</td>
                     <td>{d.salesPerson || "—"}</td>
                     {!showroom && <td>{d.deResponsible || "—"}</td>}
                     {!showroom && <td className="mono">{d.quoteRef || "—"}</td>}

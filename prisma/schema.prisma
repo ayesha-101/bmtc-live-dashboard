@@ -89,6 +89,9 @@ model Deal {
   projectName   String   @map("project_name")
   salesPerson   String   @default("") @map("sales_person")
   deResponsible String   @default("") @map("de_responsible")
+  // The brand(s) quoted on this enquiry — free text, since a job can span
+  // several and the list changes with supplier agreements.
+  brand         String   @default("")
 
   // ---- Quotation ----
   quoteRef   String?   @map("quote_ref")

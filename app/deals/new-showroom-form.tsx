@@ -47,6 +47,11 @@ export default function NewShowroomForm() {
         </div>
       </div>
 
+      <div className="field">
+        <label htmlFor="brand">Brand(s)</label>
+        <input id="brand" name="brand" maxLength={160} placeholder="e.g. Philips, Schneider" />
+      </div>
+
       <div className="form-grid">
         <div className="field">
           <label htmlFor="lpoValue">Value (AED)</label>
