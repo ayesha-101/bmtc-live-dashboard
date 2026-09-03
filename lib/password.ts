@@ -18,12 +18,14 @@ export function verifyPassword(plain: string, hash: string): Promise<boolean> {
   return bcrypt.compare(plain, hash);
 }
 
-// A reasonably strong one-time password for a freshly created account.
-// Shown once in the admin UI; the user is forced to change it on first
-// login.
-export function generateTempPassword(): string {
-  const chars = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
-  const bytes = new Uint8Array(14);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes, (b) => chars[b % chars.length]).join("");
-}
+/**
+ * The password every new account starts on. The user is forced to replace
+ * it the first time they sign in (mustChangePassword), and the change form
+ * refuses to accept this same value again.
+ *
+ * Because it is the same for everyone, it is only safe for the short gap
+ * between creating an account and the person signing in — create accounts
+ * as you hand them over, not in advance. Admin -> Security lists anyone
+ * still sitting on it.
+ */
+export const INITIAL_PASSWORD = process.env.INITIAL_PASSWORD || "BMTC@2026";

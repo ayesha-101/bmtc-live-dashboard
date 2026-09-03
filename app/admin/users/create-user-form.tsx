@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState } from "react";
 import { createUserAction, type CreateUserResult } from "./actions";
 import { ALL_DEPARTMENTS, DEPARTMENT_LABELS } from "@/lib/format";
+import { INITIAL_PASSWORD } from "@/lib/password";
 
 const initial: CreateUserResult = {};
 
@@ -13,34 +14,21 @@ export default function CreateUserForm() {
   const [role, setRole] = useState<"employee" | "manager" | "admin">("employee");
 
   useEffect(() => {
-    if (state.tempPassword) {
+    if (state.email) {
       formRef.current?.reset();
       setRole("employee");
     }
-  }, [state.tempPassword]);
+  }, [state.email]);
 
   return (
     <form action={formAction} ref={formRef}>
       {state.error && <div className="note error">{state.error}</div>}
-      {state.tempPassword && (
-        state.emailed ? (
-          <div className="note success">
-            Account <b>{state.email}</b> created and the sign-in details were
-            emailed to them. One-time password (shown once, in case you need
-            it): <b className="mono">{state.tempPassword}</b>
-          </div>
-        ) : (
-          <div className="note info">
-            Account <b>{state.email}</b> created. One-time password (shown once):{" "}
-            <b className="mono">{state.tempPassword}</b> — share it securely; they
-            must change it at first sign-in.
-            {state.emailError && (
-              <div style={{ marginTop: 6 }}>
-                <b>Email not sent:</b> {state.emailError}
-              </div>
-            )}
-          </div>
-        )
+      {state.email && (
+        <div className="note success">
+          Account <b>{state.email}</b> created. They sign in with the standard
+          first password <b className="mono">{INITIAL_PASSWORD}</b> and are asked
+          to choose their own straight away.
+        </div>
       )}
 
       <div className="form-grid">
@@ -86,6 +74,11 @@ export default function CreateUserForm() {
         </div>
       </div>
 
+      <p className="muted" style={{ marginTop: 4, marginBottom: 12 }}>
+        Everyone starts on <b className="mono">{INITIAL_PASSWORD}</b> and must
+        replace it at first sign-in. Create the account when you hand it over,
+        not in advance — Security lists anyone still on it.
+      </p>
       <button type="submit" className="btn primary" disabled={pending}>
         {pending ? "Creating…" : "Create account"}
       </button>

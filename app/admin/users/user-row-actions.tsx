@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import type { Department, UserRole } from "@prisma/client";
 import { toggleActiveAction, resetPasswordAction, updateUserAction, deleteUserAction } from "./actions";
 import { ALL_DEPARTMENTS, DEPARTMENT_LABELS } from "@/lib/format";
+import { INITIAL_PASSWORD } from "@/lib/password";
 
 
 
@@ -26,14 +27,13 @@ export default function UserRowActions({
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [temp, setTemp] = useState<string | null>(null);
-  const [tempEmailed, setTempEmailed] = useState(false);
+  const [didReset, setDidReset] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draftRole, setDraftRole] = useState<UserRole>(role);
 
   function toggle() {
     setError(null);
-    setTemp(null);
+    setDidReset(false);
     startTransition(async () => {
       const res = await toggleActiveAction(userId);
       if (res.error) setError(res.error);
@@ -41,22 +41,19 @@ export default function UserRowActions({
   }
 
   function reset() {
-    if (!confirm("Reset this user's password? Their current password stops working immediately.")) return;
+    if (!confirm(`Reset this user's password back to ${INITIAL_PASSWORD}? Their current password stops working immediately.`)) return;
     setError(null);
-    setTemp(null);
+    setDidReset(false);
     startTransition(async () => {
       const res = await resetPasswordAction(userId);
       if (res.error) setError(res.error);
-      else if (res.tempPassword) {
-        setTemp(res.tempPassword);
-        setTempEmailed(Boolean(res.emailed));
-      }
+      else if (res.reset) setDidReset(true);
     });
   }
 
   function save(formData: FormData) {
     setError(null);
-    setTemp(null);
+    setDidReset(false);
     startTransition(async () => {
       const res = await updateUserAction(userId, formData);
       if (res.error) setError(res.error);
@@ -67,7 +64,7 @@ export default function UserRowActions({
   function remove() {
     if (!confirm("Permanently delete this account? This cannot be undone.")) return;
     setError(null);
-    setTemp(null);
+    setDidReset(false);
     startTransition(async () => {
       const res = await deleteUserAction(userId);
       if (res.error) setError(res.error);
@@ -155,10 +152,10 @@ export default function UserRowActions({
           </button>
         </>
       )}
-      {temp && (
-        <div className={`note ${tempEmailed ? "success" : "info"}`} style={{ width: "100%", margin: 0 }}>
-          New one-time password: <b className="mono">{temp}</b>
-          {tempEmailed ? " — emailed to them." : " — share it securely."}
+      {didReset && (
+        <div className="note success" style={{ width: "100%", margin: 0 }}>
+          Password reset to <b className="mono">{INITIAL_PASSWORD}</b> — they
+          must change it at next sign-in.
         </div>
       )}
       {error && <div className="note error" style={{ width: "100%", margin: 0 }}>{error}</div>}

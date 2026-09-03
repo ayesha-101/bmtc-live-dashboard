@@ -59,9 +59,9 @@ export default async function SecurityPage() {
           <div className="kpi-sub">accounts with recent failures</div>
         </div>
         <div className="card">
-          <div className="kpi-label">Awaiting first password</div>
+          <div className="kpi-label">Still on default password</div>
           <div className={`kpi-value${pendingReset.length ? " amber" : ""}`}>{pendingReset.length}</div>
-          <div className="kpi-sub">still on a one-time password</div>
+          <div className="kpi-sub">have not set their own yet</div>
         </div>
         <div className="card">
           <div className="kpi-label">Active admins</div>
@@ -112,9 +112,9 @@ export default async function SecurityPage() {
 
       <div className="grid dept-grid section-gap">
         <div className="card">
-          <h2>Awaiting first password change</h2>
+          <h2>Still on the default password</h2>
           {pendingReset.length === 0 ? (
-            <p className="muted">Everyone has set a real password. ✓</p>
+            <p className="muted">Everyone has set their own password. ✓</p>
           ) : (
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
               {pendingReset.map((u) => (
