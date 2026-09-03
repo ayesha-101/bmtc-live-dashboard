@@ -9,16 +9,18 @@ import LivePoll from "@/app/components/live-poll";
 // security/oversight view, so the admin can read it without ever seeing
 // business figures. Manager and admin only (lib/permissions.ts).
 const ACTION_LABELS: Record<string, string> = {
-  quotation_created: "Quotation created",
-  converted_to_lpo: "Converted to LPO",
+  enquiry_logged: "Enquiry logged",
+  quotation_issued: "Quotation issued",
+  lpo_received: "LPO received",
   sent_to_invoicing: "Sent to invoicing",
   flagged_lost: "Flagged lost",
   invoiced: "Invoiced",
 };
 
 const ACTION_TONE: Record<string, string> = {
-  quotation_created: "quoted",
-  converted_to_lpo: "converted_lpo",
+  enquiry_logged: "enquiry",
+  quotation_issued: "quoted",
+  lpo_received: "lpo_received",
   sent_to_invoicing: "pending_invoice",
   flagged_lost: "lost",
   invoiced: "invoiced",
@@ -40,7 +42,7 @@ export default async function MonitoringPage() {
         department: true,
         createdAt: true,
         actor: { select: { fullName: true, email: true, role: true } },
-        lpo: { select: { reference: true, status: true } },
+        deal: { select: { reference: true, customer: true } },
       },
     }),
     prisma.auditLog.count(),
@@ -99,6 +101,7 @@ export default async function MonitoringPage() {
               <th>Role</th>
               <th>Action</th>
               <th>Reference</th>
+              <th>Customer</th>
               <th>Department</th>
               <th>Detail</th>
             </tr>
@@ -106,7 +109,7 @@ export default async function MonitoringPage() {
           <tbody>
             {entries.length === 0 ? (
               <tr>
-                <td colSpan={8} className="empty-state">
+                <td colSpan={9} className="empty-state">
                   No activity recorded yet.
                 </td>
               </tr>
@@ -125,7 +128,8 @@ export default async function MonitoringPage() {
                       {ACTION_LABELS[e.action] ?? e.action.replace(/_/g, " ")}
                     </span>
                   </td>
-                  <td className="mono">{e.lpo.reference}</td>
+                  <td className="mono">{e.deal.reference}</td>
+                  <td>{e.deal.customer}</td>
                   <td>{DEPARTMENT_LABELS[e.department]}</td>
                   <td className="muted">{e.note || "—"}</td>
                 </tr>

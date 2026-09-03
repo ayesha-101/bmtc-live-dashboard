@@ -174,13 +174,13 @@ export async function deleteUserAction(userId: number): Promise<UserActionResult
   const target = await prisma.user.findUnique({
     where: { id: userId },
     include: {
-      _count: { select: { lposCreated: true, lposInvoiced: true, auditEntries: true } },
+      _count: { select: { dealsCreated: true, dealsInvoiced: true, auditEntries: true } },
     },
   });
   if (!target) return { error: "User not found." };
 
   const history =
-    target._count.lposCreated + target._count.lposInvoiced + target._count.auditEntries;
+    target._count.dealsCreated + target._count.dealsInvoiced + target._count.auditEntries;
   if (history > 0) {
     return {
       error: `This account has ${history} linked record(s) and can't be deleted — deactivate it instead.`,

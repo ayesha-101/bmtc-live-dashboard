@@ -1,11 +1,11 @@
 import Link from "next/link";
 import type { User } from "@prisma/client";
 import { toActor } from "@/lib/auth";
-import { canCreateLpo, canInvoice, canManageAccounts, canViewMonitoring, isManager } from "@/lib/permissions";
+import { canCreateLpo, canInvoice, canManageAccounts, canSetTargets, canViewMonitoring, isManager } from "@/lib/permissions";
 import { DEPARTMENT_LABELS } from "@/lib/format";
 import { logoutAction } from "@/app/logout/actions";
 
-export type Section = "dashboard" | "lpos" | "invoices" | "monitoring" | "users" | "security";
+export type Section = "dashboard" | "deals" | "invoices" | "targets" | "monitoring" | "users" | "security";
 
 const ROLE_LABELS = { employee: "Employee", manager: "Manager", admin: "Admin" } as const;
 
@@ -23,8 +23,9 @@ export default function AppShell({
   // admin gets accounts + security, employees get their queue.
   const links: Array<{ id: Section; href: string; label: string; show: boolean }> = [
     { id: "dashboard", href: "/dashboard", label: "Dashboard", show: isManager(actor) },
-    { id: "lpos", href: "/lpos", label: "My LPOs", show: canCreateLpo(actor) },
+    { id: "deals", href: "/deals", label: canCreateLpo(actor) ? "My Enquiries" : "Enquiries", show: canCreateLpo(actor) || isManager(actor) },
     { id: "invoices", href: "/invoices", label: "Pending Invoices", show: canInvoice(actor) },
+    { id: "targets", href: "/targets", label: "Targets", show: canSetTargets(actor) },
     { id: "monitoring", href: "/monitoring", label: "Monitoring", show: canViewMonitoring(actor) },
     { id: "users", href: "/admin/users", label: "Users", show: canManageAccounts(actor) },
     { id: "security", href: "/admin/security", label: "Security", show: canManageAccounts(actor) },

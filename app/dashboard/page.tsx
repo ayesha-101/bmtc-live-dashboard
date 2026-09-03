@@ -1,26 +1,35 @@
+import Link from "next/link";
 import { requireManager } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { computeOverview } from "@/lib/overview";
+import { buildReport, isPeriodKey, PERIOD_LABELS, type PeriodKey } from "@/lib/overview";
 import { DEPARTMENT_LABELS, formatAED, timeAgo } from "@/lib/format";
 import AppShell from "@/app/components/app-shell";
 import LivePoll from "@/app/components/live-poll";
-import KpiCard from "./kpi-card";
+import { KpiCard, TargetBar } from "./kpi-card";
 
-export default async function DashboardPage() {
+const PERIODS: PeriodKey[] = ["month", "year", "todate"];
+
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ period?: string }>;
+}) {
   const user = await requireManager();
+  const { period: raw } = await searchParams;
+  const period: PeriodKey = isPeriodKey(raw) ? raw : "month";
 
-  const [overview, recent] = await Promise.all([
-    computeOverview(),
+  const [report, recent] = await Promise.all([
+    buildReport(period),
     prisma.auditLog.findMany({
       orderBy: { createdAt: "desc" },
-      take: 20,
+      take: 15,
       include: {
         actor: { select: { fullName: true } },
-        lpo: { select: { reference: true } },
+        deal: { select: { reference: true, customer: true } },
       },
     }),
   ]);
-  const { totals, byDepartment } = overview;
+  const { totals, byDepartment, comparable } = report;
 
   return (
     <AppShell user={user} active="dashboard">
@@ -28,37 +37,67 @@ export default async function DashboardPage() {
       <div className="row-between section-gap">
         <div>
           <h1>Manager Dashboard</h1>
-          <p className="muted">Company-wide totals, per-department performance, and live activity.</p>
+          <p className="muted">
+            Revenue is recognised from invoices. Bookings are counted on the
+            LPO date, pipeline on the quote date.
+          </p>
         </div>
         <span className="muted"><span className="live-dot" />live</span>
       </div>
 
-      <div className="grid kpi-grid section-gap">
-        <KpiCard label="Total sales (LPO)" value={formatAED(totals.sales)} sub={`${totals.lpos} LPOs`} tone="green" />
-        <KpiCard label="Total margin" value={formatAED(totals.margin)} sub="managers only" tone="green" />
-        <KpiCard label="Invoiced" value={totals.invoiced} sub={`${totals.pending} awaiting invoice`} tone={totals.pending > 0 ? "amber" : "green"} />
-        <KpiCard label="Open quoted value" value={formatAED(totals.quoted)} sub="not yet converted" />
-        <KpiCard label="Lost" value={totals.lost} tone={totals.lost > 0 ? "red" : undefined} />
+      {/* Period switcher */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
+        {PERIODS.map((p) => (
+          <Link
+            key={p}
+            href={`/dashboard?period=${p}`}
+            className={`btn${p === period ? " primary" : ""}`}
+          >
+            {PERIOD_LABELS[p]}
+          </Link>
+        ))}
       </div>
 
-      <h2>By department</h2>
+      <div className="grid kpi-grid section-gap">
+        <KpiCard
+          label="Revenue (invoiced)"
+          value={formatAED(totals.revenue)}
+          sub={comparable && totals.revenueTarget > 0
+            ? `${totals.revenueAchieved.toFixed(0)}% of ${formatAED(totals.revenueTarget)}`
+            : `${totals.invoiceCount} invoices`}
+          tone={!comparable || totals.revenueTarget === 0 ? undefined
+            : totals.revenueAchieved >= 100 ? "green" : totals.revenueAchieved >= 70 ? "amber" : "red"}
+        />
+        <KpiCard
+          label="Gross profit"
+          value={formatAED(totals.gp)}
+          sub={`${totals.gpPercent.toFixed(1)}% of revenue`}
+          tone={!comparable || totals.gpTarget === 0 ? undefined
+            : totals.gpAchieved >= 100 ? "green" : totals.gpAchieved >= 70 ? "amber" : "red"}
+        />
+        <KpiCard label="Booked (LPO)" value={formatAED(totals.booked)} sub={`${totals.bookedCount} awarded`} />
+        <KpiCard label="Pipeline (quoted)" value={formatAED(totals.pipeline)} sub={`${totals.pipelineCount} open quotations`} />
+        <KpiCard label="Lost" value={totals.lostCount} tone={totals.lostCount > 0 ? "red" : undefined} />
+      </div>
+
+      <h2>By department — {PERIOD_LABELS[period]}</h2>
       <div className="grid dept-grid section-gap">
-        {byDepartment.map((s) => {
-          return (
-            <div key={s.department} className="card">
-              <div className="row-between" style={{ marginBottom: 10 }}>
-                <strong>{DEPARTMENT_LABELS[s.department]}</strong>
-                <span className="pill">{s.lpos} LPO{s.lpos === 1 ? "" : "s"}</span>
-              </div>
-              <div className="kpi-sub" style={{ display: "grid", gap: 4 }}>
-                <div className="row-between"><span>Sales</span><span className="mono">{formatAED(s.sales)}</span></div>
-                <div className="row-between"><span>Margin</span><span className="mono">{formatAED(s.margin)}</span></div>
-                <div className="row-between"><span>Invoiced</span><span className="mono">{s.invoiced}</span></div>
-                <div className="row-between"><span>Pending invoice</span><span className="mono">{s.pending}</span></div>
-              </div>
+        {byDepartment.map((d) => (
+          <div key={d.department} className="card">
+            <div className="row-between" style={{ marginBottom: 12 }}>
+              <strong>{DEPARTMENT_LABELS[d.department]}</strong>
+              <span className="pill">{d.invoiceCount} inv</span>
             </div>
-          );
-        })}
+            <TargetBar label="Revenue" actual={d.revenue} target={d.revenueTarget} comparable={comparable} />
+            <TargetBar label="GP" actual={d.gp} target={d.gpTarget} comparable={comparable} />
+            <div className="kpi-sub" style={{ display: "grid", gap: 3, borderTop: "1px solid var(--line)", paddingTop: 8 }}>
+              <div className="row-between"><span>GP margin</span><span className="mono">{d.gpPercent.toFixed(1)}%</span></div>
+              <div className="row-between"><span>Booked (LPO)</span><span className="mono">{formatAED(d.booked)}</span></div>
+              <div className="row-between"><span>Pipeline</span><span className="mono">{formatAED(d.pipeline)}</span></div>
+              <div className="row-between"><span>Lost</span><span className="mono">{d.lostCount}</span></div>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div className="card">
@@ -71,9 +110,9 @@ export default async function DashboardPage() {
               <div key={a.id} style={{ fontSize: 12.5 }}>
                 <span className="muted" title={a.createdAt.toLocaleString()}>{timeAgo(a.createdAt)}</span>
                 {" — "}
-                <b>{a.actor.fullName}</b>: {a.action.replace(/_/g, " ")}
-                {" on "}
-                <span className="mono">{a.lpo.reference}</span>
+                <b>{a.actor.fullName}</b>: {a.action.replace(/_/g, " ")} on{" "}
+                <span className="mono">{a.deal.reference}</span>
+                <span className="muted"> · {a.deal.customer}</span>
                 <span className="pill" style={{ marginLeft: 8 }}>{DEPARTMENT_LABELS[a.department]}</span>
               </div>
             ))}

@@ -9,5 +9,5 @@ export default async function Home() {
   if (isAdmin(actor)) redirect("/admin/users");
   if (isManager(actor)) redirect("/dashboard");
   if (isSalesAdmin(actor)) redirect("/invoices");
-  redirect("/lpos");
+  redirect("/deals");
 }

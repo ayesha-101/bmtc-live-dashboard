@@ -66,10 +66,14 @@ export function canManageAccounts(user: Actor): boolean {
   return isAdmin(user);
 }
 
-// The Prisma `where` that scopes a general LPO listing to what this user
-// is allowed to see.
-export function lpoListScope(user: Actor): Prisma.LpoWhereInput {
+// Who may set the annual revenue / GP targets: the BM owns the numbers.
+export function canSetTargets(user: Actor): boolean {
+  return isManager(user);
+}
+
+// The Prisma `where` that scopes a deal listing to what this user may see.
+export function dealListScope(user: Actor): Prisma.DealWhereInput {
   if (isManager(user)) return {};
-  if (isSalesAdmin(user)) return { status: "pending_invoice" };
+  if (isSalesAdmin(user)) return { stage: "pending_invoice" };
   return { createdById: user.id };
 }

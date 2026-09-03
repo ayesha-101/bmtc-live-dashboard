@@ -18,7 +18,7 @@ export interface ChainPayload {
   id: number;
   createdAt: string;
   actorId: number;
-  lpoId: number;
+  dealId: number;
   department: string;
   action: string;
   note: string;
@@ -37,7 +37,7 @@ export function hashEntry(p: ChainPayload): string {
 export async function writeAudit(
   tx: Prisma.TransactionClient,
   entry: {
-    lpoId: number;
+    dealId: number;
     actorId: number;
     department: Department;
     action: string;
@@ -55,7 +55,7 @@ export async function writeAudit(
   // precisely what a later verification will re-read.
   const created = await tx.auditLog.create({
     data: {
-      lpoId: entry.lpoId,
+      dealId: entry.dealId,
       actorId: entry.actorId,
       department: entry.department,
       action: entry.action,
@@ -69,7 +69,7 @@ export async function writeAudit(
     id: created.id,
     createdAt: created.createdAt.toISOString(),
     actorId: created.actorId,
-    lpoId: created.lpoId,
+    dealId: created.dealId,
     department: created.department,
     action: created.action,
     note: created.note ?? "",
@@ -113,7 +113,7 @@ export async function verifyChain(
       id: r.id,
       createdAt: r.createdAt.toISOString(),
       actorId: r.actorId,
-      lpoId: r.lpoId,
+      dealId: r.dealId,
       department: r.department,
       action: r.action,
       note: r.note ?? "",
