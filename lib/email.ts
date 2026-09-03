@@ -1,15 +1,34 @@
 import { headers } from "next/headers";
 
-// Transactional email through Resend's REST API. Called with fetch rather
-// than the SDK so there's no extra dependency in the serverless bundle.
+// Transactional email with two interchangeable transports, so this can be
+// set up without touching DNS or involving IT:
 //
-// Two rules this module keeps:
+//   SMTP   — set SMTP_USER + SMTP_PASS (e.g. a Gmail App Password). Works
+//            immediately with an account you already own.
+//   Resend — set RESEND_API_KEY + MAIL_FROM. Needs a verified sending
+//            domain, but is the better long-term choice for volume.
+//
+// Resend wins if both are configured. Two rules this module keeps:
 //  1. Sending must NEVER block the action that triggered it — an account
 //     is still created if the mail fails; the caller shows the password on
 //     screen instead.
 //  2. A password is never written to a log. Only the outcome is returned.
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
+const SEND_TIMEOUT_MS = 10_000;
+
+type Transport = "resend" | "smtp" | null;
+
+function activeTransport(): Transport {
+  if (process.env.RESEND_API_KEY && process.env.MAIL_FROM) return "resend";
+  if (process.env.SMTP_USER && process.env.SMTP_PASS) return "smtp";
+  return null;
+}
+
+/** The address mail is sent from, whichever transport is in use. */
+function fromAddress(): string {
+  return process.env.MAIL_FROM || `BMTC <${process.env.SMTP_USER}>`;
+}
 
 export interface MailResult {
   sent: boolean;
@@ -18,7 +37,7 @@ export interface MailResult {
 
 /** True when the environment is configured to actually send mail. */
 export function mailConfigured(): boolean {
-  return Boolean(process.env.RESEND_API_KEY && process.env.MAIL_FROM);
+  return activeTransport() !== null;
 }
 
 /**
@@ -120,41 +139,56 @@ export async function sendCredentialsEmail(p: {
   loginUrl: string;
   isReset: boolean;
 }): Promise<MailResult> {
-  if (!mailConfigured()) {
-    return { sent: false, error: "Email is not configured." };
-  }
+  const transport = activeTransport();
+  if (!transport) return { sent: false, error: "Email is not configured." };
 
-  const body = {
-    from: process.env.MAIL_FROM,
-    to: [p.to],
-    subject: p.isReset
-      ? "BMTC — your password has been reset"
-      : "BMTC — your account details",
-    html: credentialsHtml({ ...p, email: p.to }),
-    text: credentialsText({ ...p, email: p.to }),
-  };
+  const subject = p.isReset
+    ? "BMTC — your password has been reset"
+    : "BMTC — your account details";
+  const html = credentialsHtml({ ...p, email: p.to });
+  const text = credentialsText({ ...p, email: p.to });
 
   try {
-    const res = await fetch(RESEND_ENDPOINT, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-      // Never let a slow provider hold an admin's request open.
-      signal: AbortSignal.timeout(10_000),
-    });
-
-    if (!res.ok) {
-      const detail = await res.text().catch(() => "");
-      // Log the failure reason only — never the password.
-      console.error("Credential email failed:", res.status, detail.slice(0, 300));
-      return { sent: false, error: `Mail provider returned ${res.status}.` };
+    if (transport === "resend") {
+      const res = await fetch(RESEND_ENDPOINT, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ from: fromAddress(), to: [p.to], subject, html, text }),
+        // Never let a slow provider hold an admin's request open.
+        signal: AbortSignal.timeout(SEND_TIMEOUT_MS),
+      });
+      if (!res.ok) {
+        const detail = await res.text().catch(() => "");
+        // Log the failure reason only — never the password.
+        console.error("Credential email failed:", res.status, detail.slice(0, 300));
+        return { sent: false, error: `Mail provider returned ${res.status}.` };
+      }
+      return { sent: true };
     }
+
+    // SMTP. Imported lazily so the driver is only pulled in when actually
+    // used, and the host defaults to Gmail — the setup that needs no DNS.
+    const nodemailer = (await import("nodemailer")).default;
+    const port = Number(process.env.SMTP_PORT || 465);
+    const mailer = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || "smtp.gmail.com",
+      port,
+      secure: port === 465,
+      auth: { user: process.env.SMTP_USER!, pass: process.env.SMTP_PASS! },
+      connectionTimeout: SEND_TIMEOUT_MS,
+      greetingTimeout: SEND_TIMEOUT_MS,
+      socketTimeout: SEND_TIMEOUT_MS,
+    });
+    await mailer.sendMail({ from: fromAddress(), to: p.to, subject, html, text });
     return { sent: true };
   } catch (e) {
-    console.error("Credential email error:", e instanceof Error ? e.message : e);
-    return { sent: false, error: "Could not reach the mail provider." };
+    const message = e instanceof Error ? e.message : String(e);
+    console.error("Credential email error:", message);
+    // Surface the provider's own wording — "Invalid login" and the like
+    // tell the admin exactly what to fix.
+    return { sent: false, error: message.slice(0, 160) };
   }
 }
