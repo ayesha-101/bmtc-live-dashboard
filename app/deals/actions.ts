@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/db";
 import { requireReadyUser, toActor } from "@/lib/auth";
-import { canCreateLpo } from "@/lib/permissions";
-import { createDealSchema, quoteSchema, lpoSchema } from "@/lib/validation";
+import { canCreateLpo, isShowroom } from "@/lib/permissions";
+import { createDealSchema, quoteSchema, lpoSchema, showroomSaleSchema } from "@/lib/validation";
 import { nextReference } from "@/lib/reference";
 import { writeAudit } from "@/lib/audit";
 
@@ -216,6 +216,73 @@ export async function markLostAction(dealId: number, reason: string): Promise<De
   });
 
   if (!done) return { error: "This job can't be marked lost from its current stage." };
+  revalidateAll();
+  return { success: true };
+}
+
+/**
+ * Showroom: record a completed sale in one step. There is no quotation and
+ * no invoicing queue for retail, so the row is created at the terminal
+ * `sold` stage and the LPO figures are mirrored into the invoice_* columns
+ * — that way revenue reporting treats a showroom sale exactly like an
+ * invoiced project without any special-casing downstream.
+ */
+export async function createShowroomSaleAction(
+  _prev: DealResult,
+  formData: FormData
+): Promise<DealResult> {
+  const user = await requireReadyUser();
+  if (!isShowroom(toActor(user))) {
+    return { error: "Only Showroom staff can record a showroom sale." };
+  }
+
+  const parsed = showroomSaleSchema.safeParse({
+    lpoDate: formData.get("lpoDate"),
+    customer: formData.get("customer"),
+    projectName: formData.get("projectName"),
+    salesPerson: formData.get("salesPerson"),
+    lpoRef: formData.get("lpoRef"),
+    lpoValue: formData.get("lpoValue"),
+    lpoGp: formData.get("lpoGp") || undefined,
+  });
+  if (!parsed.success) {
+    return { error: parsed.error.issues[0]?.message ?? "Invalid input." };
+  }
+  const s = parsed.data;
+
+  await prisma.$transaction(async (tx) => {
+    const reference = await nextReference(tx);
+    const deal = await tx.deal.create({
+      data: {
+        reference,
+        department: user.department,
+        createdById: user.id,
+        enquiryDate: s.lpoDate,
+        customer: s.customer,
+        projectName: s.projectName,
+        salesPerson: s.salesPerson || "",
+        deResponsible: "",
+        lpoRef: s.lpoRef,
+        lpoValue: s.lpoValue,
+        lpoGp: s.lpoGp ?? null,
+        lpoDate: s.lpoDate,
+        // Mirrored so the revenue query needs no special case.
+        invoiceRef: s.lpoRef,
+        invoiceValue: s.lpoValue,
+        invoiceGp: s.lpoGp ?? null,
+        invoiceDate: s.lpoDate,
+        stage: "sold",
+      },
+    });
+    await writeAudit(tx, {
+      dealId: deal.id,
+      actorId: user.id,
+      department: user.department,
+      action: "showroom_sale",
+      note: `LPO ${s.lpoRef} — ${s.customer}`,
+    });
+  });
+
   revalidateAll();
   return { success: true };
 }

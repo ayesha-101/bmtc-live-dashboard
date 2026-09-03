@@ -4,9 +4,17 @@ export function formatAED(n: number): string {
   return "AED " + n.toLocaleString("en-AE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// The four producing units shown as dashboard cards (Sales Admin is a
-// function, not a producing unit, so it's excluded from those cards).
-export const PRODUCING_DEPARTMENTS: Department[] = ["electrical", "urban", "lightning", "water"];
+// Units that generate revenue, and so get a dashboard card and a target.
+// Sales Admin is a back-office function, not a producing unit, so it is
+// excluded.
+export const PRODUCING_DEPARTMENTS: Department[] = [
+  "electrical", "urban", "lightning", "water", "showroom",
+];
+
+// Every department, for the admin's account pickers.
+export const ALL_DEPARTMENTS: Department[] = [
+  "electrical", "urban", "lightning", "water", "showroom", "sales_admin",
+];
 
 // Display names. The stored enum values stay as they are (changing them
 // would mean migrating every existing row for no user-visible gain) — note
@@ -16,6 +24,7 @@ export const DEPARTMENT_LABELS: Record<Department, string> = {
   urban: "Urban Solution",
   lightning: "Lighting Solution",
   water: "Water Solution",
+  showroom: "Showroom",
   sales_admin: "Sales Admin",
 };
 
@@ -25,6 +34,7 @@ export const DEPARTMENT_SHORT: Record<Department, string> = {
   urban: "Urban",
   lightning: "Lighting",
   water: "Water",
+  showroom: "Showroom",
   sales_admin: "Sales Admin",
 };
 
@@ -34,6 +44,7 @@ export const STAGE_LABELS: Record<DealStage, string> = {
   lpo_received: "LPO Received",
   pending_invoice: "Pending Invoice",
   invoiced: "Invoiced",
+  sold: "Sold",
   lost: "Lost",
 };
 

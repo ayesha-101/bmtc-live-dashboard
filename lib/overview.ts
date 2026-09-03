@@ -85,7 +85,12 @@ export async function buildReport(period: PeriodKey, now = new Date()): Promise<
   const [invoiced, booked, pipeline, lost, targets] = await Promise.all([
     prisma.deal.groupBy({
       by: ["department"],
-      where: { stage: "invoiced", ...(inWindow ? { invoiceDate: inWindow } : {}) },
+      // Showroom sales are recognised the same way: their form mirrors the
+      // LPO figures into the invoice_* columns, so one query covers both.
+      where: {
+        stage: { in: ["invoiced", "sold"] },
+        ...(inWindow ? { invoiceDate: inWindow } : {}),
+      },
       _sum: { invoiceValue: true, invoiceGp: true },
       _count: { _all: true },
     }),

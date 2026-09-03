@@ -24,6 +24,10 @@ enum Department {
   urban
   lightning
   water
+  // Retail counter. Showrooms do not quote or invoice through this system
+  // — they record the customer's LPO and the sale is done — so their rows
+  // go straight to the `sold` stage.
+  showroom
   sales_admin
 }
 
@@ -44,6 +48,7 @@ enum DealStage {
   lpo_received // customer awarded — booked
   pending_invoice // ready to bill, waiting on Sales Admin
   invoiced // billed — recognised revenue
+  sold // Showroom: LPO taken, sale complete, no invoicing step
   lost // did not close
 }
 

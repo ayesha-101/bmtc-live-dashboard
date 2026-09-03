@@ -144,6 +144,7 @@ tbody tr:hover td { background: var(--panel-2); }
 .status.lpo_received { background: var(--green-bg); color: var(--green); }
 .status.pending_invoice { background: var(--amber-bg); color: var(--amber); }
 .status.invoiced { background: var(--green-bg); color: var(--green); }
+.status.sold { background: var(--green-bg); color: var(--green); }
 .status.lost { background: var(--red-bg); color: var(--red); }
 
 /* ---------- Buttons ---------- */

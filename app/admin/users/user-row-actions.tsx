@@ -3,9 +3,9 @@
 import { useState, useTransition } from "react";
 import type { Department, UserRole } from "@prisma/client";
 import { toggleActiveAction, resetPasswordAction, updateUserAction, deleteUserAction } from "./actions";
-import { DEPARTMENT_LABELS } from "@/lib/format";
+import { ALL_DEPARTMENTS, DEPARTMENT_LABELS } from "@/lib/format";
 
-const DEPARTMENTS: Department[] = ["electrical", "urban", "lightning", "water", "sales_admin"];
+
 
 export default function UserRowActions({
   userId,
@@ -104,7 +104,7 @@ export default function UserRowActions({
             {draftRole !== "employee" && <span className="muted">(unused for this role)</span>}
           </label>
           <select name="department" defaultValue={department}>
-            {DEPARTMENTS.map((d) => (
+            {ALL_DEPARTMENTS.map((d) => (
               <option key={d} value={d}>{DEPARTMENT_LABELS[d]}</option>
             ))}
           </select>

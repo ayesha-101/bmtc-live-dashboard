@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
 import { requireReadyUser, toActor } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { canCreateLpo, canSeeMargin, dealListScope, isManager } from "@/lib/permissions";
+import { canCreateLpo, canSeeMargin, dealListScope, isManager, isShowroom } from "@/lib/permissions";
 import { DEPARTMENT_SHORT, STAGE_LABELS, formatAED, formatDate } from "@/lib/format";
 import AppShell from "@/app/components/app-shell";
 import LivePoll from "@/app/components/live-poll";
 import NewDealForm from "./new-deal-form";
+import NewShowroomForm from "./new-showroom-form";
 import DealRowActions from "./deal-row-actions";
 
 export default async function DealsPage() {
@@ -15,7 +16,10 @@ export default async function DealsPage() {
 
   const showGp = canSeeMargin(actor);
   const showOwner = isManager(actor);
-  const showActions = canCreateLpo(actor);
+  // Showroom rows are complete on creation, so they get no stage buttons
+  // and a lean table without quotation/invoice columns.
+  const showroom = isShowroom(actor);
+  const showActions = canCreateLpo(actor) && !showroom;
 
   const deals = await prisma.deal.findMany({
     where: dealListScope(actor),
@@ -29,10 +33,11 @@ export default async function DealsPage() {
       <LivePoll />
       <div className="row-between section-gap">
         <div>
-          <h1>{isManager(actor) ? "All Enquiries" : "My Enquiries"}</h1>
+          <h1>{showroom ? "Showroom Sales" : isManager(actor) ? "All Enquiries" : "My Enquiries"}</h1>
           <p className="muted">
-            Every enquiry from the day it arrives through quotation, LPO and
-            invoice. Each stage keeps its own reference, value and date.
+            {showroom
+              ? "Retail sales. Record the customer's LPO and the sale is complete — no quotation or invoicing step."
+              : "Every enquiry from the day it arrives through quotation, LPO and invoice. Each stage keeps its own reference, value and date."}
           </p>
         </div>
         <span className="muted"><span className="live-dot" />live</span>
@@ -40,8 +45,8 @@ export default async function DealsPage() {
 
       {canCreateLpo(actor) && (
         <div className="card section-gap">
-          <h2>New enquiry</h2>
-          <NewDealForm />
+          <h2>{showroom ? "New sale" : "New enquiry"}</h2>
+          {showroom ? <NewShowroomForm /> : <NewDealForm />}
         </div>
       )}
 
@@ -49,19 +54,19 @@ export default async function DealsPage() {
         <table>
           <thead>
             <tr>
-              <th>Enquiry date</th>
+              <th>{showroom ? "Date" : "Enquiry date"}</th>
               <th>Month</th>
               {showOwner && <th>Dept</th>}
               <th>Customer</th>
-              <th>Project</th>
+              <th>{showroom ? "Description" : "Project"}</th>
               <th>Sales person</th>
-              <th>D&amp;E</th>
-              <th>Quote ref #</th>
-              <th>Quote value</th>
+              {!showroom && <th>D&amp;E</th>}
+              {!showroom && <th>Quote ref #</th>}
+              {!showroom && <th>Quote value</th>}
               <th>LPO ref</th>
-              <th>LPO value</th>
-              <th>Invoice #</th>
-              <th>Invoice value</th>
+              <th>{showroom ? "Value" : "LPO value"}</th>
+              {!showroom && <th>Invoice #</th>}
+              {!showroom && <th>Invoice value</th>}
               {showGp && <th>GP</th>}
               <th>Stage</th>
               {showOwner && <th>Created by</th>}
@@ -70,7 +75,7 @@ export default async function DealsPage() {
           </thead>
           <tbody>
             {deals.length === 0 ? (
-              <tr><td colSpan={18} className="empty-state">No enquiries yet.</td></tr>
+              <tr><td colSpan={18} className="empty-state">{showroom ? "No sales recorded yet." : "No enquiries yet."}</td></tr>
             ) : (
               deals.map((d) => {
                 // The GP that matters at this stage: invoice → LPO → quote.
@@ -83,13 +88,13 @@ export default async function DealsPage() {
                     <td>{d.customer}</td>
                     <td>{d.projectName}</td>
                     <td>{d.salesPerson || "—"}</td>
-                    <td>{d.deResponsible || "—"}</td>
-                    <td className="mono">{d.quoteRef || "—"}</td>
-                    <td className="mono">{d.quoteValue === null ? "—" : formatAED(Number(d.quoteValue))}</td>
+                    {!showroom && <td>{d.deResponsible || "—"}</td>}
+                    {!showroom && <td className="mono">{d.quoteRef || "—"}</td>}
+                    {!showroom && <td className="mono">{d.quoteValue === null ? "—" : formatAED(Number(d.quoteValue))}</td>}
                     <td className="mono">{d.lpoRef || "—"}</td>
                     <td className="mono">{d.lpoValue === null ? "—" : formatAED(Number(d.lpoValue))}</td>
-                    <td className="mono">{d.invoiceRef || "—"}</td>
-                    <td className="mono">{d.invoiceValue === null ? "—" : formatAED(Number(d.invoiceValue))}</td>
+                    {!showroom && <td className="mono">{d.invoiceRef || "—"}</td>}
+                    {!showroom && <td className="mono">{d.invoiceValue === null ? "—" : formatAED(Number(d.invoiceValue))}</td>}
                     {showGp && <td className="mono">{gp === null || gp === undefined ? "—" : formatAED(Number(gp))}</td>}
                     <td>
                       <span className={`status ${d.stage}`}>{STAGE_LABELS[d.stage]}</span>

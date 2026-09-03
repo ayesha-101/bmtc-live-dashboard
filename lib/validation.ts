@@ -76,6 +76,22 @@ export const quoteSchema = z
     path: ["quoteGp"],
   });
 
+// Showroom: one form, one step. The LPO is the sale.
+export const showroomSaleSchema = z
+  .object({
+    lpoDate: z.coerce.date({ invalid_type_error: "Date is required" }),
+    customer: z.string().trim().min(1, "Customer is required").max(160),
+    projectName: z.string().trim().min(1, "Description is required").max(200),
+    salesPerson: z.string().trim().max(120).optional().or(z.literal("")),
+    lpoRef: z.string().trim().min(1, "LPO reference is required").max(120),
+    lpoValue: money("Value"),
+    lpoGp: money("GP").optional(),
+  })
+  .refine((v) => v.lpoGp === undefined || v.lpoGp <= v.lpoValue, {
+    message: "GP cannot exceed the value",
+    path: ["lpoGp"],
+  });
+
 export const targetSchema = z.object({
   year: z.coerce.number().int().min(2000).max(2100),
   revenueTarget: money("Revenue target"),

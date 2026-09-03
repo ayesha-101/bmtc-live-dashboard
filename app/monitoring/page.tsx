@@ -15,6 +15,7 @@ const ACTION_LABELS: Record<string, string> = {
   sent_to_invoicing: "Sent to invoicing",
   flagged_lost: "Flagged lost",
   invoiced: "Invoiced",
+  showroom_sale: "Showroom sale",
 };
 
 const ACTION_TONE: Record<string, string> = {
@@ -24,6 +25,7 @@ const ACTION_TONE: Record<string, string> = {
   sent_to_invoicing: "pending_invoice",
   flagged_lost: "lost",
   invoiced: "invoiced",
+  showroom_sale: "sold",
 };
 
 const PAGE_SIZE = 200;

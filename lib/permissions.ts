@@ -27,6 +27,12 @@ export function isAdmin(user: Actor): boolean {
   return user.role === "admin";
 }
 
+// A Showroom seller records the LPO and the sale is done — no quotation
+// and no invoicing step, because their business isn't project work.
+export function isShowroom(user: Actor): boolean {
+  return user.role === "employee" && user.department === "showroom";
+}
+
 // A Sales Admin is an employee in the sales_admin department.
 export function isSalesAdmin(user: Actor): boolean {
   return user.role === "employee" && user.department === "sales_admin";
@@ -37,7 +43,9 @@ export function canSeeMargin(user: Actor): boolean {
   return isManager(user);
 }
 
-// Who may create and drive LPOs: producing-department employees only.
+// Who may record business: any producing-department employee. Project
+// departments run the full enquiry→quote→LPO→invoice flow; Showroom
+// records a completed sale in one step (see isShowroom).
 export function canCreateLpo(user: Actor): boolean {
   return user.role === "employee" && user.department !== "sales_admin";
 }

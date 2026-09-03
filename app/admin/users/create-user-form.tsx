@@ -2,10 +2,10 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { createUserAction, type CreateUserResult } from "./actions";
-import { DEPARTMENT_LABELS } from "@/lib/format";
+import { ALL_DEPARTMENTS, DEPARTMENT_LABELS } from "@/lib/format";
 
 const initial: CreateUserResult = {};
-const DEPARTMENTS = ["electrical", "urban", "lightning", "water", "sales_admin"] as const;
+
 
 export default function CreateUserForm() {
   const [state, formAction, pending] = useActionState(createUserAction, initial);
@@ -66,7 +66,7 @@ export default function CreateUserForm() {
             Department {role !== "employee" && <span className="muted">(not used for this role)</span>}
           </label>
           <select id="department" name="department" defaultValue="electrical">
-            {DEPARTMENTS.map((d) => (
+            {ALL_DEPARTMENTS.map((d) => (
               <option key={d} value={d}>{DEPARTMENT_LABELS[d]}</option>
             ))}
           </select>
