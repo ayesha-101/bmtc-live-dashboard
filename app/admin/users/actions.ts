@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { requireAdmin } from "@/lib/auth";
 import { hashPassword, generateTempPassword } from "@/lib/password";
 import { createUserSchema } from "@/lib/validation";
+import { sendCredentialsEmail, mailConfigured, appOrigin } from "@/lib/email";
 import { z } from "zod";
 import { Department, UserRole } from "@prisma/client";
 
@@ -12,6 +13,10 @@ export interface CreateUserResult {
   error?: string;
   email?: string;
   tempPassword?: string;
+  // Whether the credentials reached the person by email. The password is
+  // still returned so the admin can hand it over if delivery failed.
+  emailed?: boolean;
+  emailError?: string;
 }
 
 export async function createUserAction(
@@ -52,14 +57,33 @@ export async function createUserAction(
     throw e;
   }
 
+  // Delivery is best-effort: the account already exists, so a mail failure
+  // must never look like the creation failed.
+  let emailed = false;
+  let emailError: string | undefined;
+  if (mailConfigured()) {
+    const origin = await appOrigin();
+    const res = await sendCredentialsEmail({
+      to: parsed.data.email,
+      fullName: parsed.data.fullName,
+      tempPassword,
+      loginUrl: `${origin}/login`,
+      isReset: false,
+    });
+    emailed = res.sent;
+    emailError = res.error;
+  }
+
   revalidatePath("/admin/users");
-  return { email: parsed.data.email, tempPassword };
+  return { email: parsed.data.email, tempPassword, emailed, emailError };
 }
 
 export interface UserActionResult {
   error?: string;
   tempPassword?: string;
   success?: boolean;
+  emailed?: boolean;
+  emailError?: string;
 }
 
 export async function toggleActiveAction(userId: number): Promise<UserActionResult> {
@@ -97,8 +121,23 @@ export async function resetPasswordAction(userId: number): Promise<UserActionRes
       lockedUntil: null,
     },
   });
+  let emailed = false;
+  let emailError: string | undefined;
+  if (mailConfigured()) {
+    const origin = await appOrigin();
+    const res = await sendCredentialsEmail({
+      to: target.email,
+      fullName: target.fullName,
+      tempPassword,
+      loginUrl: `${origin}/login`,
+      isReset: true,
+    });
+    emailed = res.sent;
+    emailError = res.error;
+  }
+
   revalidatePath("/admin/users");
-  return { success: true, tempPassword };
+  return { success: true, tempPassword, emailed, emailError };
 }
 
 const updateUserSchema = z.object({

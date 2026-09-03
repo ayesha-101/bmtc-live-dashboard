@@ -23,11 +23,24 @@ export default function CreateUserForm() {
     <form action={formAction} ref={formRef}>
       {state.error && <div className="note error">{state.error}</div>}
       {state.tempPassword && (
-        <div className="note success">
-          Account <b>{state.email}</b> created. One-time password (shown once):{" "}
-          <b className="mono">{state.tempPassword}</b>. Share it securely — they must
-          change it at first sign-in.
-        </div>
+        state.emailed ? (
+          <div className="note success">
+            Account <b>{state.email}</b> created and the sign-in details were
+            emailed to them. One-time password (shown once, in case you need
+            it): <b className="mono">{state.tempPassword}</b>
+          </div>
+        ) : (
+          <div className="note info">
+            Account <b>{state.email}</b> created. One-time password (shown once):{" "}
+            <b className="mono">{state.tempPassword}</b> — share it securely; they
+            must change it at first sign-in.
+            {state.emailError && (
+              <div style={{ marginTop: 6 }}>
+                <b>Email not sent:</b> {state.emailError}
+              </div>
+            )}
+          </div>
+        )
       )}
 
       <div className="form-grid">

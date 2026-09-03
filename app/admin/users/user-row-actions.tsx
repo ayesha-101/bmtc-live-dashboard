@@ -27,6 +27,7 @@ export default function UserRowActions({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [temp, setTemp] = useState<string | null>(null);
+  const [tempEmailed, setTempEmailed] = useState(false);
   const [editing, setEditing] = useState(false);
   const [draftRole, setDraftRole] = useState<UserRole>(role);
 
@@ -46,7 +47,10 @@ export default function UserRowActions({
     startTransition(async () => {
       const res = await resetPasswordAction(userId);
       if (res.error) setError(res.error);
-      else if (res.tempPassword) setTemp(res.tempPassword);
+      else if (res.tempPassword) {
+        setTemp(res.tempPassword);
+        setTempEmailed(Boolean(res.emailed));
+      }
     });
   }
 
@@ -152,8 +156,9 @@ export default function UserRowActions({
         </>
       )}
       {temp && (
-        <div className="note success" style={{ width: "100%", margin: 0 }}>
+        <div className={`note ${tempEmailed ? "success" : "info"}`} style={{ width: "100%", margin: 0 }}>
           New one-time password: <b className="mono">{temp}</b>
+          {tempEmailed ? " — emailed to them." : " — share it securely."}
         </div>
       )}
       {error && <div className="note error" style={{ width: "100%", margin: 0 }}>{error}</div>}
