@@ -111,3 +111,108 @@ lib/
 prisma/
   schema.prisma  migrations/  seed.ts
 ```
+
+## CRM feed (Abu Dhabi LPOs)
+
+The dashboard can take its LPOs straight from the CRM instead of the in-app
+form. The link is **one-way**: the CRM pushes records in, and nothing in
+this codebase ever writes back to or modifies the CRM.
+
+### How it works
+
+```
+LPO saved in the CRM
+   │  the CRM's webhook fires          (1–2 s)
+   ▼
+POST /api/crm/lpo
+   │  signature checked, Abu Dhabi filter, routed to the salesperson
+   ▼
+deals table  ──►  employee's page, manager's dashboard, audit log
+   │  the pages already poll for changes   (3–5 s)
+   ▼
+on screen, under 10 seconds end to end
+```
+
+Because the CRM opens the connection outwards, this works even when the CRM
+sits on a server inside the company network — no inbound firewall rule.
+
+### Setting it up
+
+1. Generate a secret and set it as `CRM_WEBHOOK_SECRET` (Vercel →
+   Settings → Environment Variables):
+
+   ```
+   openssl rand -hex 32
+   ```
+
+   Until it is set, the endpoint refuses every request rather than standing
+   open.
+
+2. In the CRM, add an outgoing webhook on "LPO created / updated" pointing
+   at `https://<your-domain>/api/crm/lpo`, method POST, JSON body.
+
+3. Have it authenticate in one of two ways:
+
+   - **HMAC signature (preferred).** Header `x-bmtc-signature:
+     sha256=<hex>`, an HMAC-SHA256 of the exact request body keyed with the
+     secret. This also proves the body wasn't altered on the way.
+   - **Bearer token.** Header `Authorization: Bearer <secret>`, for CRMs
+     whose webhook screen can only add a fixed header.
+
+4. Optionally set `x-bmtc-source: zoho` (or whatever it is) so the CRM Feed
+   page shows where each record came from.
+
+### What it accepts
+
+One record, or an array, optionally wrapped in `data` / `records` /
+`items` / `results`. Field names are matched loosely — case and punctuation
+are ignored, and the usual synonyms are accepted (`amount` / `value` /
+`grand_total`; `owner` / `sales_person` / `assigned_to`), including the
+nested `{ "name": ... }` objects Zoho, Salesforce and Dynamics use for
+lookups. See `lib/crm.ts` for the full alias list.
+
+```bash
+curl -X POST https://<your-domain>/api/crm/lpo \
+  -H "Authorization: Bearer $CRM_WEBHOOK_SECRET" \
+  -H "Content-Type: application/json" \
+  -d '{
+        "id": "5187000000123456",
+        "po_number": "PO-2026-0091",
+        "quotation_number": "BMTC-JIH-202601-7783",
+        "customer": "Spaceage General Cont.",
+        "project_name": "Atrium Tower",
+        "sales_person": "Nelson",
+        "department": "Electrical",
+        "brand": "BAHRA",
+        "location": "Mussafah, Abu Dhabi",
+        "amount": "118,313.16",
+        "gp_value": "14,197.58",
+        "lpo_date": "2026-01-16"
+      }'
+```
+
+### The two rules that decide an LPO's fate
+
+**Abu Dhabi only.** The location is classified three ways, not two. A
+recognised Abu Dhabi location (the emirate, `AUH`, or a town inside it —
+Mussafah, Al Ain, KIZAD, Ruwais…) is accepted. A recognised other emirate
+is skipped. Anything *unrecognised* is neither: it is held back and listed
+on the CRM Feed page, because silently dropping it would lose real work and
+silently accepting it would inflate the numbers. Adding a missing place
+name is one line in `ABU_DHABI` in `lib/crm.ts`.
+
+**The salesperson owns the row.** Records are matched to an account by
+email first, then by full name. There is no catch-all fallback account on
+purpose — attributing one person's LPO to another would corrupt the exact
+thing this system measures — so an unmatched name is held back until the
+account exists.
+
+Every record, accepted or not, is written to `crm_sync_log` with its
+reason and its original payload, visible at **/sync**. The manager sees the
+customer and value columns there; the admin sees the health of the feed
+without the business figures, consistent with the rest of the system.
+
+Re-sending a record is safe: the CRM's own id is UNIQUE on the deal, so a
+retry or an edit updates the existing row instead of creating a second one.
+An LPO already taken into billing by Sales Admin has its figures updated
+but is never dragged back to an earlier stage.

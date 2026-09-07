@@ -5,7 +5,7 @@ import { canCreateLpo, canInvoice, canManageAccounts, canSetTargets, canViewMoni
 import { DEPARTMENT_SHORT } from "@/lib/format";
 import { logoutAction } from "@/app/logout/actions";
 
-export type Section = "dashboard" | "deals" | "invoices" | "targets" | "monitoring" | "users" | "security";
+export type Section = "dashboard" | "deals" | "invoices" | "targets" | "monitoring" | "sync" | "users" | "security";
 
 const ROLE_LABELS = { employee: "Employee", manager: "Manager", admin: "Admin" } as const;
 
@@ -27,6 +27,7 @@ export default function AppShell({
     { id: "invoices", href: "/invoices", label: "Pending Invoices", show: canInvoice(actor) },
     { id: "targets", href: "/targets", label: "Targets", show: canSetTargets(actor) },
     { id: "monitoring", href: "/monitoring", label: "Monitoring", show: canViewMonitoring(actor) },
+    { id: "sync", href: "/sync", label: "CRM Feed", show: canViewMonitoring(actor) },
     { id: "users", href: "/admin/users", label: "Users", show: canManageAccounts(actor) },
     { id: "security", href: "/admin/security", label: "Security", show: canManageAccounts(actor) },
   ];

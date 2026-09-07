@@ -92,6 +92,9 @@ model Deal {
   // The brand(s) quoted on this enquiry — free text, since a job can span
   // several and the list changes with supplier agreements.
   brand         String   @default("")
+  // Where the project is. The CRM feed only accepts Abu Dhabi, and this
+  // keeps whatever the CRM actually said so the filter can be audited.
+  location      String   @default("")
 
   // ---- Quotation ----
   quoteRef   String?   @map("quote_ref")
@@ -112,6 +115,13 @@ model Deal {
   invoiceDate  DateTime? @map("invoice_date")
   invoicedById Int?      @map("invoiced_by")
   invoicedBy   User?     @relation("DealInvoicedBy", fields: [invoicedById], references: [id])
+
+  // ---- Origin ----
+  // Set when the row came from the CRM feed rather than the in-app form.
+  // UNIQUE, so a re-sent webhook updates this deal instead of duplicating
+  // it. NULL on every manually entered deal.
+  externalId     String? @unique @map("external_id")
+  externalSource String  @default("") @map("external_source")
 
   stage      DealStage @default(enquiry)
   lostReason String?   @map("lost_reason")
@@ -169,4 +179,27 @@ model Counter {
   value Int    @default(1396)
 
   @@map("counters")
+}
+
+// Every record the CRM feed has sent us, accepted or not, with the reason.
+// The integration's black box: when someone says "my LPO isn't showing",
+// the answer is one query away. The payload is retained so a record that
+// was rejected for a fixable cause (an account that didn't exist yet) can
+// be replayed rather than re-keyed.
+model CrmSyncLog {
+  id          Int      @id @default(autoincrement())
+  source      String   @default("")
+  externalId  String   @default("") @map("external_id")
+  // created | updated | skipped | rejected
+  status      String
+  reason      String?
+  location    String   @default("")
+  salesPerson String   @default("") @map("sales_person")
+  dealId      Int?     @map("deal_id")
+  payload     Json
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@index([status])
+  @@map("crm_sync_log")
 }

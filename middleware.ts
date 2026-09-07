@@ -11,7 +11,10 @@ export async function middleware(request: NextRequest) {
 
   if (
     pathname.startsWith("/login") ||
-    pathname.startsWith("/api/auth")
+    pathname.startsWith("/api/auth") ||
+    // The CRM feed carries no session cookie — it proves itself with an
+    // HMAC signature or bearer token inside the route handler instead.
+    pathname.startsWith("/api/crm")
   ) {
     return NextResponse.next();
   }

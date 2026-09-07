@@ -16,6 +16,8 @@ const ACTION_LABELS: Record<string, string> = {
   flagged_lost: "Flagged lost",
   invoiced: "Invoiced",
   showroom_sale: "Showroom sale",
+  crm_lpo_received: "LPO received from CRM",
+  crm_lpo_updated: "LPO updated from CRM",
 };
 
 const ACTION_TONE: Record<string, string> = {
@@ -26,6 +28,8 @@ const ACTION_TONE: Record<string, string> = {
   flagged_lost: "lost",
   invoiced: "invoiced",
   showroom_sale: "sold",
+  crm_lpo_received: "lpo_received",
+  crm_lpo_updated: "lpo_received",
 };
 
 const PAGE_SIZE = 200;
