@@ -136,7 +136,61 @@ on screen, under 10 seconds end to end
 Because the CRM opens the connection outwards, this works even when the CRM
 sits on a server inside the company network — no inbound firewall rule.
 
-### Setting it up
+### Setting it up in Zoho CRM
+
+Zoho's webhook builder lets you name each parameter, so the mapping is done
+there rather than in code. Webhooks need Professional edition or above.
+
+1. **Setup (⚙️) → Automation → Actions → Webhooks → New Webhook**
+
+   - URL to Notify: `https://<your-domain>/api/crm/lpo`
+   - Method: `POST`
+   - Module: `Deals` (or `Sales Orders`, if the LPO lives there)
+   - Under **Headers**, add: `Authorization` = `Bearer <CRM_WEBHOOK_SECRET>`
+
+2. In **Body / Parameters**, add one row per field. The left column is the
+   parameter name to type; the right is the module field to pick:
+
+   | Parameter name | Zoho field | Required |
+   |---|---|---|
+   | `id` | Deal Id / record id | **yes** — this is what makes re-sends safe |
+   | `amount` | Amount / Grand Total | **yes** |
+   | `location` | Billing City / a custom site field | **yes** — decides Abu Dhabi |
+   | `sales_person` | Deal Owner | **yes** — decides whose page it lands on |
+   | `sales_email` | Deal Owner Email | recommended — matches more reliably than a name |
+   | `gp_value` | your GP field | |
+   | `lpo_date` | Closing Date / PO Date | |
+   | `po_number` | PO Number | |
+   | `quotation_number` | Quote Number | links it to a quotation already in the system |
+   | `customer` | Account Name | |
+   | `project_name` | Deal Name | |
+   | `brand` | Brand / Vendor | |
+   | `department` | Division / Business Unit | otherwise taken from the salesperson |
+
+   Raw Zoho field names (`Deal_Id`, `Account_Name`, `Billing_City`, `Owner`,
+   `Amount`, `Closing_Date`, …) are recognised too, including the
+   `{"name": …, "email": …}` object Zoho sends for an owner — so a straight
+   module payload works without renaming anything.
+
+3. **Setup → Automation → Workflow Rules → Create Rule**
+
+   - Module: `Deals`
+   - Execute on: *Create or Edit*
+   - Condition: the stage that means the LPO is in hand (e.g. `Stage is
+     Closed Won`) — this is what stops open quotations being counted as
+     booked work
+   - Instant Action: the webhook from step 1
+
+4. Save, then change one deal in Zoho and open **/sync** — the record should
+   appear within seconds.
+
+Zoho sends either JSON or a form-encoded body depending on how the webhook
+was built; both are accepted. If your Zoho plan cannot add a header, the
+secret may go in the URL instead — `…/api/crm/lpo?token=<secret>` — but
+prefer the header: a URL ends up in server and proxy logs in a way a header
+does not.
+
+### Setting it up (any other CRM)
 
 1. Generate a secret and set it as `CRM_WEBHOOK_SECRET` (Vercel →
    Settings → Environment Variables):

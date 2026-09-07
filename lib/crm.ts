@@ -56,6 +56,31 @@ export function pick(raw: Raw, ...names: string[]): string {
   return "";
 }
 
+/**
+ * Reach inside a lookup object for one of its own fields.
+ *
+ * Zoho sends the record owner as `{"name": "Nelson", "email": "..."}` — the
+ * email is in there, but under no top-level key, and email is the one
+ * reliable way to tie an LPO to the right account. toText() takes the name
+ * and stops, so the email needs asking for by hand.
+ */
+export function pickSub(raw: Raw, parents: string[], sub: string): string {
+  const flat = new Map<string, unknown>();
+  for (const [k, v] of Object.entries(raw)) flat.set(normKey(k), v);
+  for (const p of parents) {
+    const parent = flat.get(normKey(p));
+    if (!parent || typeof parent !== "object" || Array.isArray(parent)) continue;
+    const inner = new Map<string, unknown>();
+    for (const [k, v] of Object.entries(parent as Raw)) inner.set(normKey(k), v);
+    const got = inner.get(normKey(sub));
+    if (got !== null && got !== undefined && typeof got !== "object") {
+      const str = String(got).trim();
+      if (str) return str;
+    }
+  }
+  return "";
+}
+
 /** Amounts arrive as "1,234.50", "AED 1,234.50", 1234.5, or "-" for none. */
 export function parseMoney(s: string): number | null {
   if (!s) return null;
@@ -197,29 +222,35 @@ export function readCrmLpo(raw: Raw): CrmLpo {
   const body = typeof inner === "object" && inner !== null ? inner : raw;
 
   const value = parseMoney(
-    pick(body, "lpo_value", "lpoValue", "value", "amount", "grand_total", "total", "net_amount", "order_value")
+    pick(body, "lpo_value", "lpoValue", "value", "amount", "grand_total", "total", "net_amount", "order_value", "Amount", "Grand_Total", "Sub_Total")
   );
   const gp = parseMoney(
-    pick(body, "lpo_gp", "gp_value", "gp", "gross_profit", "margin", "margin_value", "profit")
+    pick(body, "lpo_gp", "gp_value", "gp", "gross_profit", "margin", "margin_value", "profit", "GP_Value", "GP")
   );
 
   return {
-    externalId: pick(body, "external_id", "id", "record_id", "lpo_id", "order_id", "entity_id"),
-    lpoRef: pick(body, "lpo_ref", "lpo_number", "lpo_no", "po_number", "po_no", "purchase_order", "reference", "order_number", "subject"),
-    quoteRef: pick(body, "quote_ref", "quotation_number", "quote_number", "quote_no", "quotation_ref"),
-    customer: pick(body, "customer", "customer_name", "account", "account_name", "client", "client_name", "company"),
-    projectName: pick(body, "project_name", "project", "deal_name", "opportunity", "opportunity_name", "job_name", "description"),
-    salesPerson: pick(body, "sales_person", "salesperson", "sales_rep", "owner", "owner_name", "sales_owner", "assigned_to", "created_by"),
-    salesEmail: pick(body, "sales_email", "owner_email", "salesperson_email", "assigned_to_email", "email"),
+    // Zoho's own names are listed alongside the generic ones throughout:
+    // its webhook builder lets you choose the parameter name, but a
+    // straight module payload arrives with these.
+    externalId: pick(body, "external_id", "id", "record_id", "lpo_id", "order_id", "entity_id", "Deal_Id", "Sales_Order_Id", "Purchase_Order_Id", "entityId"),
+    lpoRef: pick(body, "lpo_ref", "lpo_number", "lpo_no", "po_number", "po_no", "purchase_order", "reference", "order_number", "subject", "PO_Number", "Subject", "SO_Number"),
+    quoteRef: pick(body, "quote_ref", "quotation_number", "quote_number", "quote_no", "quotation_ref", "Quote_Number", "Quote_Name"),
+    customer: pick(body, "customer", "customer_name", "account", "account_name", "client", "client_name", "company", "Account_Name", "Contact_Name"),
+    projectName: pick(body, "project_name", "project", "deal_name", "opportunity", "opportunity_name", "job_name", "description", "Deal_Name", "Potential_Name"),
+    salesPerson: pick(body, "sales_person", "salesperson", "sales_rep", "owner", "owner_name", "sales_owner", "assigned_to", "created_by", "Owner", "Deal_Owner", "Sales_Person"),
+    salesEmail:
+      pick(body, "sales_email", "owner_email", "salesperson_email", "assigned_to_email", "Owner_Email") ||
+      pickSub(body, ["owner", "deal_owner", "sales_person", "assigned_to", "created_by"], "email") ||
+      pick(body, "email"),
     department: mapDepartment(
-      pick(body, "department", "division", "business_unit", "bu", "product_line", "segment")
+      pick(body, "department", "division", "business_unit", "bu", "product_line", "segment", "Department", "Division")
     ),
-    brand: pick(body, "brand", "brands", "manufacturer", "make", "supplier"),
-    location: pick(body, "location", "site_location", "city", "emirate", "region", "area", "site", "project_location", "billing_city", "shipping_city"),
+    brand: pick(body, "brand", "brands", "manufacturer", "make", "supplier", "Brand", "Vendor_Name"),
+    location: pick(body, "location", "site_location", "city", "emirate", "region", "area", "site", "project_location", "billing_city", "shipping_city", "Billing_City", "Shipping_City", "Mailing_City"),
     lpoValue: value,
     lpoGp: gp,
     lpoDate: parseDate(
-      pick(body, "lpo_date", "order_date", "po_date", "date", "closing_date", "close_date", "won_date", "created_time")
+      pick(body, "lpo_date", "order_date", "po_date", "date", "closing_date", "close_date", "won_date", "created_time", "Closing_Date", "PO_Date", "Created_Time")
     ),
   };
 }

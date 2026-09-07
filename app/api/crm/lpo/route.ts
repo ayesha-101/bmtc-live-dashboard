@@ -67,14 +67,35 @@ function authorize(request: NextRequest, rawBody: string): { ok: boolean; status
   }
 
   const auth = request.headers.get("authorization") || "";
-  const token = auth.toLowerCase().startsWith("bearer ")
-    ? auth.slice(7).trim()
-    : request.headers.get("x-api-key") || "";
+  const token =
+    (auth.toLowerCase().startsWith("bearer ") ? auth.slice(7).trim() : "") ||
+    request.headers.get("x-api-key") ||
+    // Last resort, for a webhook builder that cannot add a header at all.
+    // Weaker than the alternatives — a URL lands in server and proxy logs
+    // in a way a header does not — so it is documented as the fallback,
+    // not the default.
+    request.nextUrl.searchParams.get("token") ||
+    "";
 
   if (!token) return { ok: false, status: 401, error: "Missing signature or token." };
   return timingSafeEqual(secret, token)
     ? { ok: true, status: 200 }
     : { ok: false, status: 401, error: "Bad token." };
+}
+
+/**
+ * Zoho's webhook builder can send either JSON or a form-encoded body, and
+ * which one you get depends on how the webhook was set up rather than on
+ * anything we control — so accept both. A form body is always one flat
+ * record.
+ */
+function parseBody(rawBody: string, contentType: string): unknown {
+  if (contentType.includes("application/x-www-form-urlencoded")) {
+    const form: Raw = {};
+    for (const [k, v] of new URLSearchParams(rawBody)) form[k] = v;
+    return form;
+  }
+  return JSON.parse(rawBody);
 }
 
 /** Dig the records out of whatever the CRM wrapped them in. */
@@ -105,9 +126,9 @@ export async function POST(request: NextRequest) {
 
   let parsed: unknown;
   try {
-    parsed = JSON.parse(rawBody);
+    parsed = parseBody(rawBody, request.headers.get("content-type") || "");
   } catch {
-    return NextResponse.json({ error: "Body is not valid JSON." }, { status: 400 });
+    return NextResponse.json({ error: "Body could not be read as JSON or form data." }, { status: 400 });
   }
 
   const records = extractRecords(parsed);
